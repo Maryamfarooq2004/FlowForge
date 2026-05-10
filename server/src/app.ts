@@ -49,6 +49,19 @@ export const createApp = (): Application => {
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+  // DEBUG MIDDLEWARE: Log all requests
+  app.use((req, res, next) => {
+    if (req.method !== 'OPTIONS') {
+      console.log(`[DEBUG] ${req.method} ${req.url}`);
+      if (req.body && Object.keys(req.body).length > 0) {
+        const safeBody = { ...req.body };
+        if (safeBody.password) safeBody.password = '***';
+        console.log(`[DEBUG] Body:`, JSON.stringify(safeBody));
+      }
+    }
+    next();
+  });
+
   // ── STEP 5: Cookie parsing (REQUIRED for refresh token cookie)
   app.use(cookieParser());
 

@@ -27,6 +27,7 @@ const authLimiter = rateLimit({
 router.post('/register', authLimiter, authController.register);
 router.post('/login', authLimiter, authController.login);
 router.post('/refresh-token', authController.refreshToken);
+router.post('/refresh', authController.refreshToken); // Legacy/Alias support
 router.post('/logout', authController.logout);
 
 // Protected routes
