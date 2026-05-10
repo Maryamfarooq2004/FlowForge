@@ -41,6 +41,9 @@ export const registerUser = async (userData: any) => {
 };
 
 export const verifyEmail = async (token: string) => {
+  console.log('--- VERIFY EMAIL ATTEMPT ---');
+  console.log('Received Token:', token);
+  
   const user = await User.findOne({
     emailVerificationToken: token,
     emailVerificationExpiry: { $gt: new Date() },
