@@ -18,7 +18,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 const MOCK_USERS = [
   { id: 'u1', name: 'Dr. Sara Ahmed', email: 'sara@alshifaclinic.com', orgType: 'Clinic', joined: '15 Jan 2026', projects: 3, status: 'ACTIVE' },
   { id: 'u2', name: 'Alex Rivera', email: 'alex@riverside.edu', orgType: 'School', joined: '20 Jan 2026', projects: 1, status: 'ACTIVE' },
-  { id: 'u3', name: 'James Wilson', email: 'james@cityclinic.pk', orgType: 'Clinic', joined: '02 Feb 2026', projects: 0, status: 'UNVERIFIED' },
+  { id: 'u3', name: 'James Wilson', email: 'james@cityclinic.pk', orgType: 'Clinic', joined: '02 Feb 2026', projects: 0, status: 'ACTIVE' },
   { id: 'u4', name: 'Zoya Khan', email: 'zoya@stmarys.edu', orgType: 'School', joined: '05 Feb 2026', projects: 2, status: 'ACTIVE' },
   { id: 'u5', name: 'Omar Riaz', email: 'omar@alshifa.com', orgType: 'Clinic', joined: '10 Feb 2026', projects: 0, status: 'SUSPENDED' },
 ];
@@ -96,29 +96,22 @@ const AdminUsersPage: React.FC = () => {
                     <td className="px-6 py-4">
                       <span className="font-semibold text-slate-700">{user.projects} projects</span>
                     </td>
-                    <td className="px-6 py-4">
-                      <span className={cn(
-                        "px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider inline-flex items-center gap-1.5",
-                        user.status === 'ACTIVE' ? "bg-green-100 text-green-700" :
-                        user.status === 'UNVERIFIED' ? "bg-amber-100 text-amber-700" :
-                        "bg-red-100 text-red-700"
-                      )}>
-                        <div className={cn("w-1.5 h-1.5 rounded-full", 
-                          user.status === 'ACTIVE' ? "bg-green-500" :
-                          user.status === 'UNVERIFIED' ? "bg-amber-500" : "bg-red-500"
-                        )} />
-                        {user.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end space-x-2">
-                        {user.status === 'UNVERIFIED' ? (
-                          <button className="text-xs font-bold text-[#0F766E] hover:underline px-2 py-1">Resend Email</button>
-                        ) : (
-                          <button className="p-2 text-slate-400 hover:text-[#0F766E] hover:bg-teal-50 rounded-lg transition-colors">
-                            <Eye size={16} />
-                          </button>
-                        )}
+    <td className="px-6 py-4">
+      <span className={cn(
+        "px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider inline-flex items-center gap-1.5",
+        user.status === 'ACTIVE' ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+      )}>
+        <div className={cn("w-1.5 h-1.5 rounded-full", 
+          user.status === 'ACTIVE' ? "bg-green-500" : "bg-red-500"
+        )} />
+        {user.status}
+      </span>
+    </td>
+    <td className="px-6 py-4 text-right">
+      <div className="flex items-center justify-end space-x-2">
+        <button className="p-2 text-slate-400 hover:text-[#0F766E] hover:bg-teal-50 rounded-lg transition-colors">
+          <Eye size={16} />
+        </button>
                         <div className="relative">
                           <button 
                             onClick={() => setActiveMenu(activeMenu === user.id ? null : user.id)}

@@ -18,10 +18,6 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
       return res.status(401).json({ success: false, error: 'User not found.' });
     }
     
-    if (!user.isEmailVerified) {
-      return res.status(403).json({ success: false, error: 'Email not verified.' });
-    }
-    
     // Attach user to request
     (req as any).user = user;
     next();
