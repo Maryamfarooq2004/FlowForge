@@ -9,6 +9,7 @@ import { toast } from 'react-hot-toast';
 import axiosInstance from '../../services/api/axiosInstance';
 
 const VerifyEmailPage: React.FC = () => {
+  const { token } = useParams<{ token: string }>();
   const [state, setState] = useState<'loading' | 'success' | 'error'>('loading');
   const [errorMsg, setErrorMsg] = useState('');
   const [email, setEmail] = useState('');
