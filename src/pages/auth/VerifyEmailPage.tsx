@@ -1,23 +1,24 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Logo } from '../../components/shared/Logo';
-import { CheckCircle2, Clock, Loader2 } from 'lucide-react';
+import { CheckCircle2, Clock, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { motion } from 'framer-motion';
+import { toast } from 'react-hot-toast';
 
 import axiosInstance from '../../services/api/axiosInstance';
 
 const VerifyEmailPage: React.FC = () => {
   const { token } = useParams<{ token: string }>();
   const [state, setState] = useState<'loading' | 'success' | 'expired'>('loading');
+  const [isResending, setIsResending] = useState(false);
+  const hasCalled = useRef(false);
 
   useEffect(() => {
-    if (!token) {
-      setState('expired');
-      return;
-    }
+    if (!token || hasCalled.current) return;
 
     const verifyToken = async () => {
+      hasCalled.current = true;
       try {
         await axiosInstance.get(`/api/v1/auth/verify-email?token=${token}`);
         setState('success');
@@ -58,10 +59,7 @@ const VerifyEmailPage: React.FC = () => {
               <div className="space-y-2">
                 <h2 className="text-2xl font-bold text-slate-900 font-poppins">Your account is verified! ✅</h2>
                 <p className="text-slate-600">
-                  Welcome to FlowForge, Dr. Sara Ahmed. Your Al-Shifa Clinic account is now active.
-                </p>
-                <p className="text-sm italic text-slate-400 pt-2">
-                  You registered with sara@alshifaclinic.com
+                  Welcome to FlowForge. Your account is now active and you can access your dashboard.
                 </p>
               </div>
 
@@ -82,16 +80,18 @@ const VerifyEmailPage: React.FC = () => {
               <div className="space-y-2">
                 <h2 className="text-2xl font-bold text-slate-900 font-poppins">Verification link expired</h2>
                 <p className="text-slate-600">
-                  This link has expired. Request a new one below.
+                  This link has expired or has already been used. Please log in to request a new one if needed.
                 </p>
               </div>
 
               <div className="space-y-4 w-full pt-4">
-                <Button variant="outline" className="w-full h-12 text-base font-semibold">
-                  Resend Verification Email
-                </Button>
+                <Link to="/login" className="block w-full">
+                  <Button variant="default" className="w-full h-12 text-base font-semibold">
+                    Go to Login
+                  </Button>
+                </Link>
                 <p className="text-xs text-slate-400">
-                  Maximum attempts reached. Try again in 14:59.
+                  You can resend the verification link from the login screen.
                 </p>
               </div>
             </div>

@@ -12,6 +12,9 @@ import { logger } from './utils/logger.utils';
 
 const app = express();
 
+// Trust proxy for rate limiting (Railway uses a load balancer)
+app.set('trust proxy', 1);
+
 // 1. Sentry MUST be initialized first
 initSentry(app);
 
