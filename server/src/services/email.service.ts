@@ -15,19 +15,17 @@ export const sendEmail = async (to: string, subject: string, text: string, html:
   };
 
   try {
-    if (process.env.SENDGRID_API_KEY && process.env.NODE_ENV === 'production') {
+    if (process.env.SENDGRID_API_KEY) {
       await sgMail.send(msg);
-      logger.info(`Email sent to ${to}`);
+      logger.info(`Email sent successfully to ${to}`);
     } else {
-      // Mock for development or missing API key
-      logger.info('--- EMAIL MOCK ---');
+      // Mock mode
+      logger.warn('--- EMAIL MOCK (No API Key) ---');
       logger.info(`To: ${to}`);
-      logger.info(`Subject: ${subject}`);
-      logger.info(`Content: ${text}`);
-      logger.info('------------------');
+      logger.info(`Verify Link: ${text}`);
+      logger.warn('-------------------------------');
     }
-  } catch (error) {
-    logger.error('Error sending email:', error);
-    // Don't throw — we don't want to crash the request if email fails in dev
+  } catch (error: any) {
+    logger.error('SendGrid Error details:', JSON.stringify(error.response?.body || error, null, 2));
   }
 };
