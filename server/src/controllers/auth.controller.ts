@@ -14,38 +14,33 @@ const REFRESH_TOKEN_OPTIONS = {
   secure: true,
   sameSite: 'none' as const,
   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-  path: '/api/v1/auth',
+  path: '/',
 };
 
 export const register = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const result = await authService.registerUser(req.body);
-    sendSuccess(res, null, result.message, 201);
-  } catch (error) {
-    next(error);
-  }
-};
+    const { fullName, email, orgType, password } = req.body;
 
-export const verifyEmail = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { token } = req.params;
-    if (!token) return sendError(res, 'Token is required', 400);
+    if (!fullName || !email || !orgType || !password) {
+      return res.status(400).json({
+        success: false,
+        code: 'MISSING_FIELDS',
+        message: 'All fields are required: fullName, email, orgType, password.'
+      });
+    }
+
+    const result = await authService.register({ fullName, email, orgType, password });
+
+    res.cookie('refreshToken', result.refreshToken, REFRESH_TOKEN_OPTIONS);
     
-    const result = await authService.verifyEmail(token as string);
-    sendSuccess(res, null, result.message);
-  } catch (error) {
-    next(error);
-  }
-};
-
-export const resendVerification = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { email } = req.body;
-    if (!email) return sendError(res, 'Email is required', 400);
-
-    await authService.resendVerification(email);
-    // Security: Always return success to prevent email enumeration
-    sendSuccess(res, null, 'If that email is registered and unverified, a new link has been sent.');
+    return res.status(201).json({
+      success: true,
+      message: 'Account created successfully.',
+      data: {
+        user: result.user,
+        accessToken: result.accessToken
+      }
+    });
   } catch (error) {
     next(error);
   }
@@ -58,7 +53,7 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
     res.cookie('accessToken', accessToken, ACCESS_TOKEN_OPTIONS);
     res.cookie('refreshToken', refreshToken, REFRESH_TOKEN_OPTIONS);
     
-    sendSuccess(res, { user }, 'Login successful');
+    sendSuccess(res, { user, accessToken }, 'Login successful');
   } catch (error) {
     next(error);
   }
@@ -74,9 +69,8 @@ export const refresh = async (req: Request, res: Response, next: NextFunction) =
     res.cookie('accessToken', accessToken, ACCESS_TOKEN_OPTIONS);
     res.cookie('refreshToken', refreshToken, REFRESH_TOKEN_OPTIONS);
     
-    sendSuccess(res, null, 'Token refreshed');
+    sendSuccess(res, { accessToken }, 'Token refreshed');
   } catch (error) {
-    // Clear cookies on refresh failure
     res.clearCookie('accessToken', { ...ACCESS_TOKEN_OPTIONS, maxAge: 0 });
     res.clearCookie('refreshToken', { ...REFRESH_TOKEN_OPTIONS, maxAge: 0 });
     next(error);
@@ -116,8 +110,6 @@ export const forgotPassword = async (req: Request, res: Response, next: NextFunc
     if (!email) return sendError(res, 'Email is required', 400);
 
     await authService.forgotPassword(email);
-
-    // SECURITY: Always return success message
     sendSuccess(res, null, 'If an account exists with that email, a reset link has been sent.');
   } catch (error) {
     next(error);

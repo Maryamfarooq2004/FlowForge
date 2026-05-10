@@ -2,13 +2,12 @@ import { create } from 'zustand';
 import axiosInstance from '../services/api/axiosInstance';
 
 export interface User {
-  _id: string;
+  id: string;
   fullName: string;
   email: string;
-  organizationType: 'clinic' | 'school';
+  orgType: 'clinic' | 'school';
   businessName?: string;
   logoUrl?: string | null;
-  isEmailVerified: boolean;
   role: 'admin' | 'user';
   createdAt: string;
 }
@@ -21,6 +20,7 @@ interface AuthStore {
   login: (credentials: any) => Promise<void>;
   logout: () => void;
   setUser: (user: User) => void;
+  setAuthenticated: (val: boolean) => void;
   setInitialized: (val: boolean) => void;
   clearAuth: () => void;
   refreshToken: () => Promise<void>;
@@ -55,13 +55,14 @@ export const useAuthStore = create<AuthStore>((set) => ({
     }
   },
   setUser: (user) => set({ user, isAuthenticated: !!user }),
+  setAuthenticated: (val) => set({ isAuthenticated: val }),
   setInitialized: (val) => set({ isInitialized: val }),
   clearAuth: () => set({ user: null, isAuthenticated: false }),
   refreshToken: async () => {
     try {
       const response = await axiosInstance.post('/api/v1/auth/refresh');
       if (response.data.success) {
-        // Success handled by axios interceptor but we can sync state here if needed
+        // Success handled by axios interceptor
       }
     } catch (error) {
       set({ user: null, isAuthenticated: false });

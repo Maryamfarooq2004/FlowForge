@@ -22,26 +22,27 @@ const userSchema = new Schema({
     minlength: [8, 'Password must be at least 8 characters'], 
     select: false 
   },
-  organizationType: { 
+  orgType: { 
     type: String, 
-    enum: ['clinic', 'school'], 
+    enum: { 
+      values: ['clinic', 'school'], 
+      message: 'Organization type must be clinic or school' 
+    }, 
     required: [true, 'Organization type is required'] 
   },
-  businessName: { type: String, trim: true, maxlength: 200 },
+  businessName: { type: String, trim: true },
   logoUrl: { type: String },
   role: { type: String, enum: ['user', 'admin'], default: 'user' },
-  isEmailVerified: { type: Boolean, default: false },
-  emailVerificationToken: { type: String, select: false },
-  emailVerificationExpiry: { type: Date, select: false },
-  passwordResetToken: { type: String, select: false },
-  passwordResetExpiry: { type: Date, select: false },
   loginAttempts: { type: Number, default: 0 },
   lockUntil: { type: Date },
+  passwordResetToken: { type: String, select: false },
+  passwordResetTokenExpires: { type: Date, select: false },
   refreshTokens: [{ 
     token: String, 
     createdAt: { type: Date, default: Date.now } 
   }],
   lastLoginAt: { type: Date },
+  lastLoginIp: { type: String },
 }, { 
   timestamps: true 
 });
@@ -53,10 +54,8 @@ userSchema.methods.toJSON = function() {
   delete user.refreshTokens;
   delete user.loginAttempts;
   delete user.lockUntil;
-  delete user.emailVerificationToken;
-  delete user.emailVerificationExpiry;
   delete user.passwordResetToken;
-  delete user.passwordResetExpiry;
+  delete user.passwordResetTokenExpires;
   return user;
 };
 

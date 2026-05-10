@@ -10,7 +10,6 @@ import { Button } from '../../components/ui/Button';
 import { useAuthStore } from '../../store/authStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
-import axiosInstance from '../../services/api/axiosInstance';
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -24,7 +23,6 @@ const LoginPage: React.FC = () => {
   const [loginError, setLoginError] = useState<string | null>(null);
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [lockoutTimeLeft, setLockoutTimeLeft] = useState(0);
-  const [isResending, setIsResending] = useState(false);
   const { login, isLoading } = useAuthStore();
   const navigate = useNavigate();
 
@@ -50,7 +48,6 @@ const LoginPage: React.FC = () => {
   const {
     register,
     handleSubmit,
-    watch,
     formState: { errors },
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -61,29 +58,17 @@ const LoginPage: React.FC = () => {
     setLoginError(null);
     try {
       await login(data);
-      // Simulate successful login needing onboarding
-      // In a real app, you'd check user.isOnboarded flag
-      // For this demo, we'll navigate to onboarding if it's the first login
-      const isFirstLogin = true; // Mock flag
-      if (isFirstLogin) {
-        navigate('/onboarding');
-      } else {
-        navigate('/hub');
-      }
+      // For this demo, we'll navigate to hub
+      navigate('/hub');
     } catch (error: any) {
       const code = error.response?.data?.code;
       const message = error.response?.data?.error || 'INVALID EMAIL OR PASSWORD';
       
       switch (code) {
         case 'ACCOUNT_LOCKED':
-          // Convert the retryAfter ISO string back to seconds left if needed
-          // Or just fall back to the 15 min lock
           setLockoutTimeLeft(15 * 60);
           setFailedAttempts(5);
           setLoginError(null);
-          break;
-        case 'EMAIL_NOT_VERIFIED':
-          setLoginError('EMAIL_NOT_VERIFIED: ' + message.toUpperCase());
           break;
         case 'RATE_LIMITED':
           toast.error(message);
@@ -101,23 +86,6 @@ const LoginPage: React.FC = () => {
             setLoginError(message.toUpperCase());
           }
       }
-    }
-  };
-
-  const handleResendVerification = async () => {
-    const email = watch('email');
-    if (!email) {
-      toast.error('Please enter your email address first');
-      return;
-    }
-    try {
-      setIsResending(true);
-      await axiosInstance.post('/api/v1/auth/resend-verification', { email });
-      toast.success('Verification email resent! Please check your inbox.');
-    } catch (error) {
-      toast.error('Failed to resend email. Please try again later.');
-    } finally {
-      setIsResending(false);
     }
   };
 
@@ -153,13 +121,6 @@ const LoginPage: React.FC = () => {
                 {formatTime(lockoutTimeLeft)}
               </div>
               <p className="text-xs text-slate-400">(minutes : seconds)</p>
-            </div>
-
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mt-6 flex items-start space-x-3">
-              <span className="text-lg leading-none">⚠️</span>
-              <p className="text-sm text-amber-700 font-medium">
-                A notification has been sent to {watch('email') || 'your email'}.
-              </p>
             </div>
 
             <div className="mt-8 text-center space-y-4">
@@ -202,26 +163,12 @@ const LoginPage: React.FC = () => {
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 flex flex-col space-y-2 text-red-700 overflow-hidden"
+              className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 flex items-center space-x-3 text-red-700 overflow-hidden"
             >
-              <div className="flex items-center space-x-3">
-                <AlertCircle className="h-5 w-5 shrink-0" />
-                <span className="text-xs font-semibold uppercase tracking-wide">
-                  {loginError.replace('EMAIL_NOT_VERIFIED: ', '')}
-                </span>
-              </div>
-              {loginError.includes('EMAIL_NOT_VERIFIED') && (
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={handleResendVerification}
-                  isLoading={isResending}
-                  className="w-full mt-2 border-red-200 text-red-700 hover:bg-red-100"
-                >
-                  Resend Verification Email
-                </Button>
-              )}
+              <AlertCircle className="h-5 w-5 shrink-0" />
+              <span className="text-xs font-semibold uppercase tracking-wide">
+                {loginError}
+              </span>
             </motion.div>
           )}
         </AnimatePresence>
