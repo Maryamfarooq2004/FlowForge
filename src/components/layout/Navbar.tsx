@@ -75,7 +75,7 @@ export const Navbar: React.FC<NavbarProps> = ({ projectName, currentSection, isA
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               className="flex items-center space-x-2 pl-2 hover:bg-white/5 rounded-lg p-1 transition-colors"
             >
-              <Avatar name={user?.name || "User"} size="sm" className="bg-[#34D399] text-[#134E4A]" />
+              <Avatar name={user?.fullName || "User"} size="sm" className="bg-[#34D399] text-[#134E4A]" />
               <ChevronDown size={16} className={cn("text-white/50 transition-transform", isMenuOpen && "rotate-180")} />
             </button>
 
@@ -90,7 +90,7 @@ export const Navbar: React.FC<NavbarProps> = ({ projectName, currentSection, isA
                     className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-2xl border border-slate-100 z-20 py-2 overflow-hidden"
                   >
                     <div className="px-4 py-2 border-b border-slate-50 mb-1">
-                      <p className="text-sm font-bold text-slate-900">{user?.name}</p>
+                      <p className="text-sm font-bold text-slate-900">{user?.fullName}</p>
                       <p className="text-[10px] text-slate-500 font-medium truncate">{user?.email}</p>
                     </div>
                     

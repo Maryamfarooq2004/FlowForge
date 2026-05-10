@@ -73,9 +73,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ type = 'hub' }) => {
       {/* User Card Bottom */}
       <div className="p-4 border-t border-[#E2E8F0] bg-slate-50/50">
         <div className="flex items-center space-x-3">
-          <Avatar name={user?.name || "User"} size="sm" />
+          <Avatar name={user?.fullName || "User"} size="sm" />
           <div className="overflow-hidden">
-            <p className="text-xs font-bold text-slate-800 truncate">{user?.name}</p>
+            <p className="text-xs font-bold text-slate-800 truncate">{user?.fullName}</p>
             <p className="text-[10px] text-slate-500 truncate">{user?.email}</p>
           </div>
         </div>
