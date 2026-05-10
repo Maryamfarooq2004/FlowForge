@@ -1,5 +1,7 @@
 # FlowForge Monorepo
 
+FlowForge is an AI-powered platform that converts clinic and school workflows into full-stack applications using forms, chat, and file uploads. It generates WorkflowSpecs, React frontends, Node.js backends, PostgreSQL databases, RBAC, notifications, and customizable UI templates.
+
 Welcome to the FlowForge project. This is a monorepo containing the frontend, backend, and OCR microservice.
 
 ## Structure
