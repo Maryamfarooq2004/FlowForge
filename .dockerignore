@@ -1,0 +1,15 @@
+node_modules
+dist
+.git
+.gitignore
+README.md
+
+# Ignore all frontend folders to speed up backend build
+flowforge-frontend/
+client/
+frontend/
+src/
+public/
+*.log
+.vercel
+.next
