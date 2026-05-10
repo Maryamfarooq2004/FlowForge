@@ -66,9 +66,18 @@ app.get('/api/health', (req: Request, res: Response) => {
   res.status(200).json({
     status: 'ok',
     version: '1.0.0',
-    database: 'connected', // Simplified for health check
+    database: 'connected',
     timestamp: new Date().toISOString(),
   });
+});
+
+// Root Welcome Message
+app.get('/', (req: Request, res: Response) => {
+  res.status(200).send('Welcome to FlowForge API. The service is live!');
+});
+
+app.get('/api', (req: Request, res: Response) => {
+  res.status(200).json({ message: 'FlowForge API v1 is active' });
 });
 
 // Routes Placeholder (Step 3-7)
