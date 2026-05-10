@@ -1,11 +1,11 @@
 import { Router } from 'express';
 import * as projectController from '../controllers/project.controller';
-import { authenticate } from '../middleware/auth.middleware';
+import { protect } from '../middleware/auth.middleware';
 
 const router = Router();
 
 // All project routes require authentication
-router.use(authenticate);
+router.use(protect);
 
 router.get('/', projectController.listProjects);
 router.get('/archived', projectController.listArchivedProjects);

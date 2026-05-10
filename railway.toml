@@ -4,5 +4,5 @@ dockerfilePath = "server/Dockerfile"
 
 [deploy]
 startCommand = "node dist/server.js"
-healthcheckPath = "/api/health"
+healthcheckPath = "/health"
 healthcheckTimeout = 30
