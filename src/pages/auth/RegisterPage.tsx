@@ -58,9 +58,9 @@ const RegisterPage: React.FC = () => {
       const response = await axiosInstance.post('/api/v1/auth/register', data);
       
       if (response.data.success) {
-        toast.success('Registration successful! Please check your email to verify.');
-        // Redirect to login after a short delay
-        setTimeout(() => navigate('/login'), 3000);
+        toast.success('Registration successful!');
+        // Redirect to check-email
+        navigate('/check-email', { state: { email: data.email } });
       }
     } catch (error: any) {
       const message = error.response?.data?.error || 'Registration failed. Please try again.';

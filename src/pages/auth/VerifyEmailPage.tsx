@@ -5,20 +5,28 @@ import { CheckCircle2, Clock, Loader2 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { motion } from 'framer-motion';
 
+import axiosInstance from '../../services/api/axiosInstance';
+
 const VerifyEmailPage: React.FC = () => {
   const { token } = useParams<{ token: string }>();
   const [state, setState] = useState<'loading' | 'success' | 'expired'>('loading');
 
   useEffect(() => {
-    // Simulate API verification
-    const timer = setTimeout(() => {
-      if (token === 'expired') {
-        setState('expired');
-      } else {
+    if (!token) {
+      setState('expired');
+      return;
+    }
+
+    const verifyToken = async () => {
+      try {
+        await axiosInstance.get(`/api/v1/auth/verify-email?token=${token}`);
         setState('success');
+      } catch (error) {
+        setState('expired');
       }
-    }, 2000);
-    return () => clearTimeout(timer);
+    };
+
+    verifyToken();
   }, [token]);
 
   return (

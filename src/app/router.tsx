@@ -7,6 +7,7 @@ import { RouteError } from '../components/shared/RouteError';
 // Lazy load pages
 const LoginPage = lazy(() => import('../pages/auth/LoginPage'));
 const RegisterPage = lazy(() => import('../pages/auth/RegisterPage'));
+const CheckEmailPage = lazy(() => import('../pages/auth/CheckEmailPage'));
 const VerifyEmailPage = lazy(() => import('../pages/auth/VerifyEmailPage'));
 const ForgotPasswordPage = lazy(() => import('../pages/auth/ForgotPasswordPage'));
 const ResetPasswordPage = lazy(() => import('../pages/auth/ResetPasswordPage'));
@@ -71,6 +72,14 @@ const routes = [
     element: (
       <Suspense fallback={<LoadingScreen />}>
         <RegisterPage />
+      </Suspense>
+    ),
+  },
+  {
+    path: '/check-email',
+    element: (
+      <Suspense fallback={<LoadingScreen />}>
+        <CheckEmailPage />
       </Suspense>
     ),
   },
