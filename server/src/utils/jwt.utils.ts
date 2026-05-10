@@ -18,21 +18,21 @@ const JWT_CONFIG = {
 };
 
 export const signAccessToken = (payload: AccessTokenPayload): string => {
-  return jwt.sign(payload, process.env.JWT_ACCESS_SECRET!, {
-    expiresIn: process.env.JWT_ACCESS_EXPIRY || '8h',
+  return jwt.sign(payload, process.env.JWT_ACCESS_SECRET as string, {
+    expiresIn: (process.env.JWT_ACCESS_EXPIRY as any) || '8h',
     ...JWT_CONFIG,
-  });
+  } as jwt.SignOptions);
 };
 
 export const signRefreshToken = (userId: string): { token: string; tokenId: string } => {
   const tokenId = uuidv4();
   const token = jwt.sign(
     { userId, tokenId }, 
-    process.env.JWT_REFRESH_SECRET!, 
+    process.env.JWT_REFRESH_SECRET as string, 
     {
-      expiresIn: process.env.JWT_REFRESH_EXPIRY || '7d',
+      expiresIn: (process.env.JWT_REFRESH_EXPIRY as any) || '7d',
       ...JWT_CONFIG,
-    }
+    } as jwt.SignOptions
   );
   return { token, tokenId };
 };

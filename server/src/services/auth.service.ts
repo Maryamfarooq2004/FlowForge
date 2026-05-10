@@ -108,7 +108,7 @@ export const rotateToken = async (oldRefreshToken: string) => {
 
     if (tokenIndex === -1) {
       // SECURITY: Token reuse detected! Invalidate ALL tokens for this user
-      user.refreshTokens = [];
+      (user as any).refreshTokens = [];
       await user.save();
       throw { statusCode: 401, message: 'Security breach detected. Please login again.' };
     }
@@ -138,7 +138,7 @@ export const logoutUser = async (userId: string, refreshToken: string) => {
   const user = await User.findById(userId).select('+refreshTokens');
   if (user) {
     const hashedToken = crypto.createHash('sha256').update(refreshToken).digest('hex');
-    user.refreshTokens = user.refreshTokens.filter(rt => rt.token !== hashedToken);
+    (user as any).refreshTokens = user.refreshTokens.filter(rt => rt.token !== hashedToken);
     await user.save();
   }
 };
@@ -177,7 +177,7 @@ export const resetPassword = async (token: string, newPassword: string) => {
   user.passwordResetExpiry = undefined;
   
   // SECURITY: Invalidate ALL refresh tokens on password change
-  user.refreshTokens = [];
+  (user as any).refreshTokens = [];
   
   await user.save();
 };
