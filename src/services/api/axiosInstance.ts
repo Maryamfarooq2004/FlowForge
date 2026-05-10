@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://flowforge-production-0fc1.up.railway.app';
+// Force Railway URL to bypass any Vercel environment variables
+const baseURL = 'https://flowforge-production-0fc1.up.railway.app';
 
 const axiosInstance = axios.create({
   baseURL,
