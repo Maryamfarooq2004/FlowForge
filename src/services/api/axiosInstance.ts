@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://api.flowforge.app';
+const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://flowforge-production-0fc1.up.railway.app';
 
 const axiosInstance = axios.create({
   baseURL,
