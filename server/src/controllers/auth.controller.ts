@@ -24,7 +24,10 @@ export const register = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { fullName, email, orgType, password } = req.body;
+    let { fullName, email, orgType, organizationType, password } = req.body;
+
+    // Support both field names for compatibility with cached frontend versions
+    if (!orgType && organizationType) orgType = organizationType;
 
     if (!fullName || !email || !orgType || !password) {
       res.status(400).json({
