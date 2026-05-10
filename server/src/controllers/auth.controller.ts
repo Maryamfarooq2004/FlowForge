@@ -21,6 +21,7 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
   try {
     const { fullName, email, orgType, password } = req.body;
     console.log(`[Auth] Registration attempt for: ${email}`);
+    console.log('[Auth] Body received:', JSON.stringify(req.body));
 
     if (!fullName || !email || !orgType || !password) {
       return res.status(400).json({
@@ -52,6 +53,7 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
 export const login = async (req: Request, res: Response, next: NextFunction) => {
   try {
     console.log(`[Auth] Login attempt for: ${req.body.email}`);
+    console.log('[Auth] Login Body received:', JSON.stringify(req.body));
     const { user, accessToken, refreshToken } = await authService.loginUser(req.body);
     
     res.cookie('accessToken', accessToken, ACCESS_TOKEN_OPTIONS);
