@@ -4,7 +4,13 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { router } from './router';
 import { useAuthStore } from '../store/authStore';
 import axiosInstance from '../services/api/axiosInstance';
-import LoadingScreen from '../components/shared/LoadingScreen';
+import { Spinner } from '../components/ui/Spinner';
+
+const LoadingScreen = () => (
+  <div className="h-screen w-screen flex items-center justify-center bg-[#F8FAFC]">
+    <Spinner className="h-10 w-10 text-[#0F766E]" />
+  </div>
+);
 
 const queryClient = new QueryClient();
 
