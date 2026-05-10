@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, FolderOpen, Search, Filter } from 'lucide-react';
+import { Plus, FolderOpen, Search } from 'lucide-react';
 import { AppShell } from '../../components/layout/AppShell';
 import { Button } from '../../components/ui/Button';
 import { ProjectCard } from '../../features/projects/components/ProjectCard';
@@ -8,22 +8,34 @@ import { mockProjects } from '../../constants/mockData';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { Skeleton } from '../../components/ui/Skeleton';
 import type { ProjectStatus } from '../../components/ui/StatusBadge';
+import { useAuthStore } from '../../store/authStore';
 
 const ProjectHubPage: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'all' | 'archived'>('all');
   const [isLoading, setIsLoading] = useState(false);
-
-  const projects = (mockProjects as any[]).filter(p => {
-    if (activeTab === 'archived') return p.status === 'ARCHIVED';
-    return p.status !== 'ARCHIVED';
-  });
+  const { user } = useAuthStore();
+  
+  // Special handling for Dr. Maryam (Dummy Data)
+  const isDrMaryam = user?.email?.toLowerCase() === 'maryamfarooqkhan2004@gmail.com';
+  
+  const projects = isDrMaryam 
+    ? (mockProjects as any[]).filter(p => {
+        if (activeTab === 'archived') return p.status === 'ARCHIVED';
+        return p.status !== 'ARCHIVED';
+      })
+    : []; // Empty for any other user (Live mode)
 
   return (
     <AppShell>
       <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 font-poppins mb-2">My Projects</h1>
+          <h1 className="text-3xl font-bold text-slate-900 font-poppins mb-1">
+            Welcome back, {user?.fullName?.split(' ')[0] || 'User'}
+          </h1>
+          <p className="text-sm text-slate-500 font-medium mb-4">
+            Manage and monitor your flow generation projects.
+          </p>
           <div className="flex space-x-6">
             <button 
               onClick={() => setActiveTab('all')}
@@ -71,7 +83,6 @@ const ProjectHubPage: React.FC = () => {
         </div>
       ) : projects.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Create New Project Dashboard Card */}
           <button 
             onClick={() => setIsModalOpen(true)}
             className="flex flex-col items-center justify-center p-8 bg-slate-50 border-2 border-dashed border-slate-300 rounded-2xl hover:bg-slate-100 hover:border-slate-400 transition-all group"
@@ -95,13 +106,15 @@ const ProjectHubPage: React.FC = () => {
           ))}
         </div>
       ) : (
-        <EmptyState 
-          icon={<FolderOpen size={48} />}
-          title="No projects yet"
-          subtitle="Create your first project to get started with FlowForge."
-          actionLabel="+ New Project"
-          onAction={() => setIsModalOpen(true)}
-        />
+        <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-slate-100 shadow-sm">
+          <EmptyState 
+            icon={<FolderOpen size={48} className="text-slate-200" />}
+            title="No projects yet"
+            subtitle="Create your first project to get started with FlowForge."
+            actionLabel="+ New Project"
+            onAction={() => setIsModalOpen(true)}
+          />
+        </div>
       )}
 
       <CreateProjectModal 
