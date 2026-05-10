@@ -28,7 +28,7 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
 
 export const verifyEmail = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { token } = req.query;
+    const { token } = req.params;
     if (!token) return sendError(res, 'Token is required', 400);
     
     const result = await authService.verifyEmail(token as string);

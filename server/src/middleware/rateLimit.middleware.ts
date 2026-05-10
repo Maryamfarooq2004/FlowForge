@@ -13,6 +13,7 @@ export const generalRateLimit = rateLimit({
 export const authRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
+  keyGenerator: (req) => (req.body.email || req.ip).toString(),
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, code: 'RATE_LIMITED', error: 'Too many attempts. Please try again in 15 minutes.' },
@@ -22,6 +23,7 @@ export const authRateLimit = rateLimit({
 export const resendRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
+  keyGenerator: (req) => (req.body.email || req.ip).toString(),
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, code: 'RATE_LIMITED', error: 'Too many resend attempts. Please try again in 15 minutes.' },

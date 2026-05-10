@@ -10,7 +10,7 @@ import axiosInstance from '../../services/api/axiosInstance';
 
 const VerifyEmailPage: React.FC = () => {
   const { token } = useParams<{ token: string }>();
-  const [state, setState] = useState<'loading' | 'success' | 'error'>('loading');
+  const [state, setState] = useState<'loading' | 'success' | 'expired' | 'invalid' | 'already_verified'>('loading');
   const [errorMsg, setErrorMsg] = useState('');
   const [email, setEmail] = useState('');
   const [isResending, setIsResending] = useState(false);
@@ -21,15 +21,23 @@ const VerifyEmailPage: React.FC = () => {
 
     const verifyToken = async () => {
       hasCalled.current = true;
-      // Small delay to allow App-level auth state to settle
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
       try {
-        await axiosInstance.get(`/api/v1/auth/verify-email?token=${token}`);
-        setState('success');
+        const response = await axiosInstance.get(`/api/v1/auth/verify-email/${token}`);
+        if (response.data.code === 'ALREADY_VERIFIED') {
+          setState('already_verified');
+        } else {
+          setState('success');
+        }
       } catch (error: any) {
-        setState('error');
-        setErrorMsg(error.response?.data?.error || 'Verification failed');
+        const code = error.response?.data?.code;
+        if (code === 'TOKEN_EXPIRED') {
+          setState('expired');
+        } else if (code === 'ALREADY_VERIFIED') {
+          setState('already_verified');
+        } else {
+          setState('invalid');
+          setErrorMsg(error.response?.data?.error || 'Verification failed');
+        }
       }
     };
 
@@ -92,16 +100,41 @@ const VerifyEmailPage: React.FC = () => {
             </div>
           )}
 
-          {state === 'error' && (
+          {state === 'already_verified' && (
+            <div className="space-y-6">
+              <div className="h-20 w-20 rounded-full border-2 border-[#0F766E] flex items-center justify-center mx-auto text-[#0F766E]">
+                <CheckCircle2 size={40} />
+              </div>
+              
+              <div className="space-y-2">
+                <h2 className="text-2xl font-bold text-slate-900 font-poppins">Already Verified</h2>
+                <p className="text-slate-600">
+                  Your email is already verified. You can log in to your account.
+                </p>
+              </div>
+
+              <Link to="/login" className="block w-full pt-4">
+                <Button className="w-full h-12 text-base font-semibold">
+                  Go to Login →
+                </Button>
+              </Link>
+            </div>
+          )}
+
+          {(state === 'expired' || state === 'invalid') && (
             <div className="space-y-6 w-full">
               <div className="h-20 w-20 rounded-full border-2 border-amber-500 flex items-center justify-center mx-auto text-amber-500">
                 <Clock size={40} />
               </div>
               
               <div className="space-y-2">
-                <h2 className="text-2xl font-bold text-slate-900 font-poppins">Verification failed</h2>
+                <h2 className="text-2xl font-bold text-slate-900 font-poppins">
+                  {state === 'expired' ? 'Link Expired' : 'Invalid Link'}
+                </h2>
                 <p className="text-slate-600">
-                  {errorMsg}.
+                  {state === 'expired' 
+                    ? 'Your verification link has expired. Please request a new one.' 
+                    : errorMsg || 'This verification link is invalid.'}
                 </p>
               </div>
 

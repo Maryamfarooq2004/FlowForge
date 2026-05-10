@@ -10,47 +10,64 @@ export const registerUser = async (userData: any) => {
     throw { statusCode: 400, message: 'Email already registered' };
   }
 
-  // Generate verification token
-  const verificationToken = crypto.randomBytes(32).toString('hex');
-  const verificationExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+  // Strategy 2: Hashed Token (as requested)
+  const rawToken = crypto.randomBytes(32).toString('hex');
+  const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex');
+  
+  // Cause A1 Fix: Correct 24h expiry in milliseconds
+  const verificationExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); 
 
   const user = await User.create({
     ...userData,
-    emailVerificationToken: verificationToken,
+    emailVerificationToken: hashedToken,
     emailVerificationExpiry: verificationExpiry,
   });
 
-  const verifyUrl = `https://flow-forge-k66k.vercel.app/verify-email/${verificationToken}`;
+  const verifyUrl = `https://flow-forge-k66k.vercel.app/verify-email/${rawToken}`;
   const emailHtml = `
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
       <h1 style="color: #0F766E;">Welcome to FlowForge!</h1>
       <p>Thank you for registering. Please verify your email address to activate your account.</p>
       <a href="${verifyUrl}" style="display: inline-block; padding: 12px 24px; background-color: #0F766E; color: white; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 20px 0;">Verify Email Address</a>
-      <p style="color: #64748B; font-size: 14px;">If the button doesn't work, copy and paste this link into your browser: <br/> ${verifyUrl}</p>
+      <p style="color: #64748B; font-size: 14px;">This link will expire in 24 hours. If the button doesn't work, copy and paste this link into your browser: <br/> ${verifyUrl}</p>
     </div>
   `;
 
   try {
     await sendEmail(user.email, 'Verify your FlowForge Account', `Please verify your email: ${verifyUrl}`, emailHtml);
   } catch (emailError) {
-    // Log the error but DO NOT throw, as the user was successfully created
     console.error('SendGrid failed:', emailError);
   }
 
   return { message: 'Check your email to verify your account' };
 };
 
-export const verifyEmail = async (token: string) => {
-  console.log('--- VERIFY EMAIL ATTEMPT ---');
-  console.log('Received Token:', token);
+export const verifyEmail = async (rawToken: string) => {
+  console.log('=== VERIFY EMAIL DEBUG ===');
+  console.log('Raw token received:', rawToken?.substring(0, 10) + '...');
   
+  const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex');
+  console.log('Hashed token:', hashedToken.substring(0, 10) + '...');
+  console.log('Current time:', new Date().toISOString());
+
   const user = await User.findOne({
-    emailVerificationToken: token,
+    emailVerificationToken: hashedToken,
     emailVerificationExpiry: { $gt: new Date() },
-  }).select('+emailVerificationToken +emailVerificationExpiry');
+  }).select('+emailVerificationToken +emailVerificationExpiry +isEmailVerified');
 
   if (!user) {
-    throw { statusCode: 400, message: 'Invalid or expired verification token' };
+    // Cause A2 Check: Check if it exists but is expired
+    const expiredUser = await User.findOne({ emailVerificationToken: hashedToken })
+      .select('+emailVerificationExpiry');
+    
+    if (expiredUser) {
+      throw { statusCode: 400, code: 'TOKEN_EXPIRED', message: 'Verification link has expired.' };
+    }
+    throw { statusCode: 400, code: 'TOKEN_INVALID', message: 'Invalid verification link.' };
+  }
+
+  if (user.isEmailVerified) {
+    return { message: 'Email already verified', code: 'ALREADY_VERIFIED' };
   }
 
   user.isEmailVerified = true;
@@ -58,21 +75,22 @@ export const verifyEmail = async (token: string) => {
   user.emailVerificationExpiry = undefined;
   await user.save();
 
-  return { message: 'Email verified successfully' };
+  return { message: 'Email verified successfully', code: 'VERIFIED' };
 };
 
 export const resendVerification = async (email: string) => {
   const user = await User.findOne({ email });
-  if (!user || user.isEmailVerified) return; // Prevent enumeration and resending to verified users
+  if (!user || user.isEmailVerified) return;
 
-  const verificationToken = crypto.randomBytes(32).toString('hex');
-  const verificationExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+  const rawToken = crypto.randomBytes(32).toString('hex');
+  const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex');
+  const verificationExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); 
 
-  user.emailVerificationToken = verificationToken;
+  user.emailVerificationToken = hashedToken;
   user.emailVerificationExpiry = verificationExpiry;
   await user.save();
 
-  const verifyUrl = `https://flow-forge-k66k.vercel.app/verify-email/${verificationToken}`;
+  const verifyUrl = `https://flow-forge-k66k.vercel.app/verify-email/${rawToken}`;
   const emailHtml = `
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
       <h1 style="color: #0F766E;">Verify your FlowForge Account</h1>
