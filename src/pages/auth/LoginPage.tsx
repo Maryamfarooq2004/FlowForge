@@ -67,14 +67,16 @@ const LoginPage: React.FC = () => {
       } else {
         navigate('/hub');
       }
-    } catch (error) {
+    } catch (error: any) {
+      const message = error.response?.data?.error || 'INVALID EMAIL OR PASSWORD';
       const newAttempts = failedAttempts + 1;
       setFailedAttempts(newAttempts);
-      if (newAttempts >= 5) {
-        setLockoutTimeLeft(15 * 60); // 15 minutes
+      
+      if (newAttempts >= 5 || message.includes('locked')) {
+        setLockoutTimeLeft(15 * 60);
         setLoginError(null);
       } else {
-        setLoginError('INVALID EMAIL OR PASSWORD');
+        setLoginError(message.toUpperCase());
       }
     }
   };

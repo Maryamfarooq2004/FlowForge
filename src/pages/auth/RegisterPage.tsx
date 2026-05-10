@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
+import axiosInstance from '../../services/api/axiosInstance';
+import { toast } from 'react-hot-toast';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Eye, EyeOff, Building2, School, ChevronDown } from 'lucide-react';
@@ -22,8 +24,10 @@ const registerSchema = z.object({
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
 const RegisterPage: React.FC = () => {
+  const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState(0);
+  const [serverError, setServerError] = useState<string | null>(null);
 
   const {
     register,
@@ -48,8 +52,20 @@ const RegisterPage: React.FC = () => {
   };
 
   const onSubmit = async (data: RegisterFormValues) => {
-    console.log('Register data:', data);
-    // Success handling logic here
+    try {
+      setServerError(null);
+      const response = await axiosInstance.post('/api/v1/auth/register', data);
+      
+      if (response.data.success) {
+        toast.success('Registration successful! Please check your email to verify.');
+        // Redirect to login after a short delay
+        setTimeout(() => navigate('/login'), 3000);
+      }
+    } catch (error: any) {
+      const message = error.response?.data?.error || 'Registration failed. Please try again.';
+      setServerError(message);
+      toast.error(message);
+    }
   };
 
   const strengthLabels = ['WEAK', 'FAIR', 'GOOD', 'STRONG'];
@@ -61,6 +77,12 @@ const RegisterPage: React.FC = () => {
         <h2 className="text-[26px] font-bold text-slate-900 font-poppins">Create Account</h2>
         <p className="text-sm text-slate-500 font-inter">Join the next evolution of workflow management.</p>
       </div>
+
+      {serverError && (
+        <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm font-medium">
+          {serverError}
+        </div>
+      )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="mt-4 space-y-2.5">
         <Input

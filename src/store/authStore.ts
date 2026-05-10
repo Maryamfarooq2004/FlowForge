@@ -1,13 +1,14 @@
 import { create } from 'zustand';
+import axiosInstance from '../services/api/axiosInstance';
 
 export interface User {
-  id: string;
-  name: string;
+  _id: string;
+  fullName: string;
   email: string;
-  orgType: 'clinic' | 'school';
-  businessName: string;
+  organizationType: 'clinic' | 'school';
+  businessName?: string;
   logoUrl?: string | null;
-  isVerified: boolean;
+  isEmailVerified: boolean;
   role: 'admin' | 'user';
   createdAt: string;
 }
@@ -28,29 +29,36 @@ export const useAuthStore = create<AuthStore>((set) => ({
   isLoading: false,
   login: async (credentials) => {
     set({ isLoading: true });
-    // Mock login logic
-    setTimeout(() => {
-      set({ 
-        user: {
-          id: 'usr_001',
-          name: 'Dr. Sara Ahmed',
-          email: credentials.email || 'sara@alshifaclinic.com',
-          orgType: 'clinic',
-          businessName: 'Al-Shifa Clinic',
-          isVerified: true,
-          role: (credentials.email === 'admin@flowforge.com') ? 'admin' : 'user',
-          createdAt: new Date().toISOString()
-        },
-        isAuthenticated: true,
-        isLoading: false
-      });
-    }, 1500);
+    try {
+      const response = await axiosInstance.post('/api/v1/auth/login', credentials);
+      if (response.data.success) {
+        set({ 
+          user: response.data.data.user,
+          isAuthenticated: true,
+          isLoading: false
+        });
+      }
+    } catch (error) {
+      set({ isLoading: false });
+      throw error;
+    }
   },
-  logout: () => {
-    set({ user: null, isAuthenticated: false });
+  logout: async () => {
+    try {
+      await axiosInstance.post('/api/v1/auth/logout');
+    } finally {
+      set({ user: null, isAuthenticated: false });
+    }
   },
   setUser: (user) => set({ user, isAuthenticated: !!user }),
   refreshToken: async () => {
-    // Mock refresh logic
+    try {
+      const response = await axiosInstance.post('/api/v1/auth/refresh');
+      if (response.data.success) {
+        // Success handled by axios interceptor but we can sync state here if needed
+      }
+    } catch (error) {
+      set({ user: null, isAuthenticated: false });
+    }
   },
 }));

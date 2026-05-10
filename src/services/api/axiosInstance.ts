@@ -21,7 +21,7 @@ axiosInstance.interceptors.response.use(
       
       try {
         // Attempt to refresh token via backend httpOnly cookie
-        await axios.post(`${baseURL}/auth/refresh`, {}, { withCredentials: true });
+        await axios.post(`${baseURL}/api/v1/auth/refresh`, {}, { withCredentials: true });
         return axiosInstance(originalRequest);
       } catch (refreshError) {
         // If refresh fails, redirect to login
