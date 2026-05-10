@@ -80,9 +80,11 @@ app.get('/api', (req: Request, res: Response) => {
 // Routes
 import authRoutes from './routes/auth.routes';
 import projectRoutes from './routes/project.routes';
+import { seedDatabase } from './controllers/debug.controller';
 
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/projects', projectRoutes);
+app.get('/api/v1/debug/seed', seedDatabase);
 
 // 7. Sentry error handler BEFORE custom error handler
 sentryErrorHandler(app);
