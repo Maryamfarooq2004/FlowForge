@@ -1,39 +1,24 @@
-# Environment files — NEVER COMMIT THESE
-.env                    # SECURITY: contains secrets
-.env.local              # SECURITY
-.env.production         # SECURITY
-.env.staging            # SECURITY
-server/.env             # SECURITY
-client/.env             # SECURITY
-python-service/.env     # SECURITY
-*.env                   # SECURITY: catch-all
-
-# Dependencies
-node_modules/
-client/node_modules/
-server/node_modules/
-__pycache__/
-*.pyc
-.venv/
-
-# Build outputs
-client/dist/
-server/dist/
-*.js.map
-
-# Logs — can contain sensitive data
+# Logs
+logs
 *.log
 npm-debug.log*
 yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
-# OS files
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
 .DS_Store
-Thumbs.db
-
-# IDE files
-.vscode/settings.json   # Can expose local paths
-.idea/
-
-# Uploaded files (never commit user uploads)
-server/uploads/
-python-service/uploads/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
