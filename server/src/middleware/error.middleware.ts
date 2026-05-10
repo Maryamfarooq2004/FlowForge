@@ -40,6 +40,8 @@ export const errorMiddleware = (
   }
   
   // Log all errors internally
+  console.log('--- GLOBAL ERROR ---');
+  console.log(err);
   logger.error({
     message: err.message,
     stack: err.stack,

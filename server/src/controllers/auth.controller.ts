@@ -20,6 +20,7 @@ const REFRESH_TOKEN_OPTIONS = {
 export const register = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { fullName, email, orgType, password } = req.body;
+    console.log(`[Auth] Registration attempt for: ${email}`);
 
     if (!fullName || !email || !orgType || !password) {
       return res.status(400).json({
@@ -30,6 +31,7 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
     }
 
     const result = await authService.register({ fullName, email, orgType, password });
+    console.log(`[Auth] Registration SUCCESS for: ${email}`);
 
     res.cookie('refreshToken', result.refreshToken, REFRESH_TOKEN_OPTIONS);
     
@@ -42,19 +44,23 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
       }
     });
   } catch (error) {
+    console.error(`[Auth] Registration ERROR:`, error);
     next(error);
   }
 };
 
 export const login = async (req: Request, res: Response, next: NextFunction) => {
   try {
+    console.log(`[Auth] Login attempt for: ${req.body.email}`);
     const { user, accessToken, refreshToken } = await authService.loginUser(req.body);
     
     res.cookie('accessToken', accessToken, ACCESS_TOKEN_OPTIONS);
     res.cookie('refreshToken', refreshToken, REFRESH_TOKEN_OPTIONS);
     
+    console.log(`[Auth] Login SUCCESS for: ${req.body.email}`);
     sendSuccess(res, { user, accessToken }, 'Login successful');
   } catch (error) {
+    console.error(`[Auth] Login ERROR:`, error);
     next(error);
   }
 };
