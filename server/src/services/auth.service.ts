@@ -44,38 +44,45 @@ export const registerUser = async (userData: any) => {
 
 export const verifyEmail = async (rawToken: string) => {
   console.log('=== VERIFY EMAIL DEBUG ===');
-  console.log('Raw token received:', rawToken?.substring(0, 10) + '...');
+  console.log('Raw token received:', rawToken);
   
   const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex');
-  console.log('Hashed token:', hashedToken.substring(0, 10) + '...');
-  console.log('Current time:', new Date().toISOString());
+  console.log('Hashed token for lookup:', hashedToken);
 
-  const user = await User.findOne({
-    emailVerificationToken: hashedToken,
-    emailVerificationExpiry: { $gt: new Date() },
-  }).select('+emailVerificationToken +emailVerificationExpiry +isEmailVerified');
+  try {
+    const user = await User.findOne({
+      emailVerificationToken: hashedToken,
+      emailVerificationExpiry: { $gt: new Date() },
+    }).select('+emailVerificationToken +emailVerificationExpiry +isEmailVerified');
 
-  if (!user) {
-    // Cause A2 Check: Check if it exists but is expired
-    const expiredUser = await User.findOne({ emailVerificationToken: hashedToken })
-      .select('+emailVerificationExpiry');
-    
-    if (expiredUser) {
-      throw { statusCode: 400, code: 'TOKEN_EXPIRED', message: 'Verification link has expired.' };
+    if (!user) {
+      console.log('[Auth] No user found with this token hash');
+      const expiredUser = await User.findOne({ emailVerificationToken: hashedToken })
+        .select('+emailVerificationExpiry');
+      
+      if (expiredUser) {
+        console.log('[Auth] Token exists but is expired');
+        throw { statusCode: 400, code: 'TOKEN_EXPIRED', message: 'Verification link has expired.' };
+      }
+      throw { statusCode: 400, code: 'TOKEN_INVALID', message: 'Invalid verification link.' };
     }
-    throw { statusCode: 400, code: 'TOKEN_INVALID', message: 'Invalid verification link.' };
+
+    if (user.isEmailVerified) {
+      console.log('[Auth] User already verified');
+      return { message: 'Email already verified', code: 'ALREADY_VERIFIED' };
+    }
+
+    user.isEmailVerified = true;
+    user.emailVerificationToken = undefined;
+    user.emailVerificationExpiry = undefined;
+    await user.save();
+    console.log('[Auth] Verification SUCCESS');
+
+    return { message: 'Email verified successfully', code: 'VERIFIED' };
+  } catch (err: any) {
+    console.error('[Auth] Mongoose Error during lookup:', err);
+    throw err;
   }
-
-  if (user.isEmailVerified) {
-    return { message: 'Email already verified', code: 'ALREADY_VERIFIED' };
-  }
-
-  user.isEmailVerified = true;
-  user.emailVerificationToken = undefined;
-  user.emailVerificationExpiry = undefined;
-  await user.save();
-
-  return { message: 'Email verified successfully', code: 'VERIFIED' };
 };
 
 export const resendVerification = async (email: string) => {
