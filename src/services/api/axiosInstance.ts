@@ -43,9 +43,23 @@ axiosInstance.interceptors.response.use(
         
         return axiosInstance(originalRequest);
       } catch (refreshError) {
-        // If refresh fails, clear queue and redirect
+        // If refresh fails, clear queue
         refreshQueue = [];
-        window.location.href = '/login';
+        
+        // BUG FIX: Prevent infinite refresh loop
+        // 1. Don't redirect if the failed request was the initial /me check
+        const isMeRequest = originalRequest.url?.includes('/auth/me');
+        
+        // 2. Don't redirect if we are already on a public page
+        const publicPaths = ['/login', '/register', '/forgot-password', '/reset-password', '/verify-email', '/'];
+        const isPublicPath = publicPaths.some(path => 
+          path === '/' ? window.location.pathname === '/' : window.location.pathname.includes(path)
+        );
+        
+        if (!isMeRequest && !isPublicPath) {
+          window.location.href = '/login';
+        }
+        
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
