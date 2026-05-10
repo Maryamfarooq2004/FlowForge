@@ -64,13 +64,8 @@ const RegisterPage: React.FC = () => {
       const response = await authService.register(data);
       
       if (response.data.success) {
-        const { user, accessToken } = response.data.data;
-        useAuthStore.getState().setUser(user);
-        useAuthStore.getState().setAccessToken(accessToken);
-        useAuthStore.getState().setAuthenticated(true);
-
-        toast.success('Account created! Welcome to FlowForge.');
-        navigate('/hub');
+        toast.success('Account created! Please log in to continue.');
+        navigate('/login');
       }
     } catch (err: any) {
       const code = err.response?.data?.code;
