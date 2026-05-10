@@ -1,6 +1,10 @@
 import sgMail from '@sendgrid/mail';
 import { logger } from '../utils/logger.utils';
 
+console.log('--- EMAIL SERVICE INIT ---');
+console.log('SENDGRID_API_KEY status:', process.env.SENDGRID_API_KEY ? 'FOUND' : 'MISSING');
+console.log('SENDGRID_FROM_EMAIL:', process.env.SENDGRID_FROM_EMAIL || 'NOT SET');
+
 if (process.env.SENDGRID_API_KEY) {
   sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 }
