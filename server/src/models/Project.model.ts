@@ -28,6 +28,7 @@ const projectSchema = new Schema({
   liveUrl: { type: String },
   customDomain: { type: String },
   isArchived: { type: Boolean, default: false },
+  intakeData: { type: Schema.Types.Mixed, default: {} },
 }, { 
   timestamps: true 
 });

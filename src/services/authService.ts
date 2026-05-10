@@ -3,7 +3,7 @@ import axiosInstance from '../lib/axios';
 export interface RegisterDto {
   fullName: string;
   email: string;
-  orgType: 'clinic' | 'school';
+  organizationType: 'clinic' | 'school';
   password: string;
 }
 

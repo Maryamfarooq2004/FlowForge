@@ -4,7 +4,7 @@ interface User {
   id: string;
   fullName: string;
   email: string;
-  orgType: 'clinic' | 'school';
+  organizationType: 'clinic' | 'school';
   businessName?: string;
   logoUrl?: string;
   createdAt: string;

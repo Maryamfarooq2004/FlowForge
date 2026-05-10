@@ -15,7 +15,7 @@ import { cn } from '../../utils/classNames';
 const registerSchema = z.object({
   fullName: z.string().min(2, 'Name must be at least 2 characters').max(100, 'Name is too long'),
   email: z.string().min(1, 'Email is required').email('Please enter a valid email address'),
-  orgType: z.enum(['clinic', 'school'], {
+  organizationType: z.enum(['clinic', 'school'], {
     required_error: 'Please select an organization type'
   }),
   password: z.string()
@@ -43,7 +43,7 @@ const RegisterPage: React.FC = () => {
   } = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
-      orgType: undefined
+      organizationType: undefined
     }
   });
 
@@ -138,10 +138,10 @@ const RegisterPage: React.FC = () => {
           </label>
           <div className="relative">
             <select
-              {...register('orgType')}
+              {...register('organizationType')}
               className={cn(
                 "appearance-none w-full border border-[#E2E8F0] rounded-lg h-11 px-10 focus:outline-none focus:ring-2 focus:ring-[#0F766E] transition-all bg-white text-slate-700",
-                errors.orgType && "border-[#DC2626] ring-red-100"
+                errors.organizationType && "border-[#DC2626] ring-red-100"
               )}
             >
               <option value="">Select organization type</option>
@@ -149,13 +149,13 @@ const RegisterPage: React.FC = () => {
               <option value="school">Educational School</option>
             </select>
             <div className="absolute left-3 top-3 text-slate-400">
-              {watch('orgType') === 'school' ? <School size={20} /> : <Building2 size={20} />}
+              {watch('organizationType') === 'school' ? <School size={20} /> : <Building2 size={20} />}
             </div>
             <div className="absolute right-3 top-3 text-slate-400 pointer-events-none">
               <ChevronDown size={20} />
             </div>
           </div>
-          {errors.orgType && <p className="text-xs text-[#DC2626]">{errors.orgType.message}</p>}
+          {errors.organizationType && <p className="text-xs text-[#DC2626]">{errors.organizationType.message}</p>}
           <p className="text-[11px] text-slate-400">
             Your selection will configure default workflows for your business type.
           </p>

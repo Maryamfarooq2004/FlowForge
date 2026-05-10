@@ -3,7 +3,7 @@ export const mockUser = {
   id: 'usr_001',
   name: 'Dr. Sara Ahmed',
   email: 'sara@alshifaclinic.com',
-  orgType: 'clinic',
+  organizationType: 'clinic',
   businessName: 'Al-Shifa Clinic',
   logoUrl: null,
   isVerified: true,

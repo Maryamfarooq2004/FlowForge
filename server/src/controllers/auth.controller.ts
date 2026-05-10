@@ -24,21 +24,26 @@ export const register = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    let { fullName, email, orgType, organizationType, password } = req.body;
+    let { fullName, email, organizationType, orgType, password } = req.body;
 
-    // Support both field names for compatibility with cached frontend versions
-    if (!orgType && organizationType) orgType = organizationType;
+    // Handle legacy mapping if needed (defense in depth)
+    if (!organizationType && orgType) organizationType = orgType;
 
-    if (!fullName || !email || !orgType || !password) {
+    if (!fullName || !email || !organizationType || !password) {
       res.status(400).json({
         success: false,
         code: 'MISSING_FIELDS',
-        message: 'fullName, email, orgType, and password are all required.',
+        message: 'fullName, email, organizationType, and password are all required.',
       });
       return;
     }
 
-    const result = await authService.registerService(fullName, email, orgType, password);
+    const result = await authService.registerService(
+      fullName,
+      email,
+      organizationType,
+      password
+    );
 
     res.cookie('refreshToken', result.refreshToken, COOKIE_OPTIONS);
 

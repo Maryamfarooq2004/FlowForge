@@ -5,16 +5,17 @@ export interface IUser extends Document {
   fullName: string;
   email: string;
   password: string;
-  orgType: 'clinic' | 'school';
+  organizationType: 'clinic' | 'school';
   businessName?: string;
   logoUrl?: string;
+  isEmailVerified: boolean;
+  role: 'user' | 'admin';
   loginAttempts: number;
   lockUntil?: Date;
   refreshTokens: string[];
   passwordResetToken?: string;
   passwordResetTokenExpires?: Date;
   lastLoginAt?: Date;
-  lastLoginIp?: string;
   createdAt: Date;
   updatedAt: Date;
   isLocked(): boolean;
@@ -46,7 +47,7 @@ const userSchema = new Schema<IUser>(
       minlength: [8, 'Password must be at least 8 characters'],
       select: false,
     },
-    orgType: {
+    organizationType: {
       type: String,
       enum: {
         values: ['clinic', 'school'],
@@ -54,15 +55,16 @@ const userSchema = new Schema<IUser>(
       },
       required: [true, 'Organization type is required'],
     },
-    businessName: { type: String, trim: true },
-    logoUrl: { type: String },
+    businessName: { type: String, trim: true, default: '' },
+    logoUrl: { type: String, default: null },
+    isEmailVerified: { type: Boolean, default: true },
+    role: { type: String, enum: ['user', 'admin'], default: 'user' },
     loginAttempts: { type: Number, default: 0 },
-    lockUntil: { type: Date },
+    lockUntil: { type: Date, default: null },
     refreshTokens: { type: [String], default: [], select: false },
     passwordResetToken: { type: String, select: false },
     passwordResetTokenExpires: { type: Date, select: false },
     lastLoginAt: { type: Date },
-    lastLoginIp: { type: String },
   },
   {
     timestamps: true,

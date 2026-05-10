@@ -17,7 +17,7 @@ const sanitizeUser = (user: IUser) => ({
   id: user._id.toString(),
   fullName: user.fullName,
   email: user.email,
-  orgType: user.orgType,
+  organizationType: user.organizationType,
   businessName: user.businessName,
   logoUrl: user.logoUrl,
   createdAt: user.createdAt,
@@ -32,7 +32,7 @@ const hashToken = (token: string): string =>
 export const registerService = async (
   fullName: string,
   email: string,
-  orgType: 'clinic' | 'school',
+  organizationType: 'clinic' | 'school',
   password: string
 ) => {
   // 1. Validate email format
@@ -72,7 +72,7 @@ export const registerService = async (
     user = await User.create({
       fullName: fullName.trim(),
       email: email.toLowerCase().trim(),
-      orgType,
+      organizationType,
       password: hashedPassword,
       lastLoginAt: new Date(),
     });
@@ -179,7 +179,6 @@ export const loginService = async (
     lockUntil: undefined,
     refreshTokens: updatedTokens,
     lastLoginAt: new Date(),
-    lastLoginIp: ip || 'unknown',
   });
 
   return {

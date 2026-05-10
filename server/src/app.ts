@@ -6,6 +6,8 @@ import rateLimit from 'express-rate-limit';
 import cookieParser from 'cookie-parser';
 import mongoose from 'mongoose';
 import authRoutes from './routes/auth.routes';
+import adminRoutes from './routes/admin.routes';
+import intakeRoutes from './routes/intake.routes';
 
 export const createApp = (): Application => {
   const app = express();
@@ -90,6 +92,8 @@ export const createApp = (): Application => {
 
   // ── STEP 9: Routes
   app.use('/api/v1/auth', authRoutes);
+  app.use('/api/v1/admin', adminRoutes);
+  app.use('/api/v1/intake', intakeRoutes);
 
   // ── STEP 10: 404 handler
   app.use((req, res) => {
