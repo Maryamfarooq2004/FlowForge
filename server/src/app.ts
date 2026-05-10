@@ -2,20 +2,16 @@ import express, { Request, Response } from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import morgan from 'morgan';
-import * as Sentry from '@sentry/node';
+import cookieParser from 'cookie-parser';
+import { initSentry, sentryErrorHandler } from './config/sentry';
 import { errorMiddleware } from './middleware/error.middleware';
 import { generalRateLimit } from './middleware/rateLimit.middleware';
 import { logger } from './utils/logger.utils';
 
-// 1. Sentry MUST be initialized first
-if (process.env.SENTRY_DSN) {
-  Sentry.init({ 
-    dsn: process.env.SENTRY_DSN, 
-    environment: process.env.NODE_ENV || 'development' 
-  });
-}
-
 const app = express();
+
+// 1. Sentry MUST be initialized first
+initSentry(app);
 
 // 2. Helmet MUST come before any routes
 app.use(helmet({
@@ -50,6 +46,7 @@ app.use(cors({
 // 4. Body parsers — BUG 5 FIX: with size limits to prevent DoS
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(cookieParser());
 
 // 5. Rate limiting on all routes (BUG 3 FIX)
 app.use(generalRateLimit);
@@ -80,13 +77,15 @@ app.get('/api', (req: Request, res: Response) => {
   res.status(200).json({ message: 'FlowForge API v1 is active' });
 });
 
-// Routes Placeholder (Step 3-7)
-// app.use('/api/v1/auth', authRoutes);
+// Routes
+import authRoutes from './routes/auth.routes';
+import projectRoutes from './routes/project.routes';
+
+app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/projects', projectRoutes);
 
 // 7. Sentry error handler BEFORE custom error handler
-if (process.env.SENTRY_DSN) {
-  app.use(Sentry.Handlers.errorHandler());
-}
+sentryErrorHandler(app);
 
 // 8. Global error handler MUST be last (BUG 4 FIX)
 app.use(errorMiddleware);
