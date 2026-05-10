@@ -23,7 +23,7 @@ export const sendError = (
   res.status(statusCode).json({
     success: false,
     error,
-    ...(details && process.env.NODE_ENV !== 'production' && { details }),
+    ...(details && process.env.NODE_ENV !== 'production' ? { details } : {}),
     timestamp: new Date().toISOString(),
   });
 };

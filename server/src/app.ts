@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import morgan from 'morgan';
@@ -62,7 +62,7 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 // Public Health Check
-app.get('/api/health', (req, res) => {
+app.get('/api/health', (req: Request, res: Response) => {
   res.status(200).json({
     status: 'ok',
     version: '1.0.0',
