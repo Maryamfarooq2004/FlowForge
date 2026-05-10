@@ -41,15 +41,16 @@ const RegisterPage: React.FC = () => {
 
 
 
-  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
+  const passwordValue = watch('password') || '';
+  
+  React.useEffect(() => {
     let strength = 0;
-    if (val.length >= 8) strength++;
-    if (/[A-Z]/.test(val)) strength++;
-    if (/[0-9]/.test(val)) strength++;
-    if (/[^A-Za-z0-9]/.test(val)) strength++;
+    if (passwordValue.length >= 8) strength++;
+    if (/[A-Z]/.test(passwordValue)) strength++;
+    if (/[0-9]/.test(passwordValue)) strength++;
+    if (/[^A-Za-z0-9]/.test(passwordValue)) strength++;
     setPasswordStrength(strength);
-  };
+  }, [passwordValue]);
 
   const onSubmit = async (data: RegisterFormValues) => {
     try {
@@ -141,10 +142,6 @@ const RegisterPage: React.FC = () => {
               placeholder="••••••••"
               autoComplete="new-password"
               {...register('password')}
-              onChange={(e) => {
-                register('password').onChange(e);
-                handlePasswordChange(e);
-              }}
               variant={errors.password ? 'error' : 'default'}
               errorMessage={errors.password?.message}
             />
