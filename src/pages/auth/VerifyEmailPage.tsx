@@ -20,6 +20,9 @@ const VerifyEmailPage: React.FC = () => {
 
     const verifyToken = async () => {
       hasCalled.current = true;
+      // Small delay to allow App-level auth state to settle
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
       try {
         await axiosInstance.get(`/api/v1/auth/verify-email?token=${token}`);
         setState('success');
