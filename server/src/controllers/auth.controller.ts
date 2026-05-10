@@ -85,3 +85,29 @@ export const logout = async (req: Request, res: Response, next: NextFunction) =>
     next(error);
   }
 };
+
+export const forgotPassword = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { email } = req.body;
+    if (!email) return sendError(res, 'Email is required', 400);
+
+    await authService.forgotPassword(email);
+
+    // SECURITY: Always return success message
+    sendSuccess(res, null, 'If an account exists with that email, a reset link has been sent.');
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const resetPassword = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { token, password } = req.body;
+    if (!token || !password) return sendError(res, 'Token and password are required', 400);
+
+    await authService.resetPassword(token, password);
+    sendSuccess(res, null, 'Password updated successfully');
+  } catch (error) {
+    next(error);
+  }
+};

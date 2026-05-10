@@ -10,5 +10,7 @@ router.get('/verify-email', authController.verifyEmail);
 router.post('/login', authRateLimit, authController.login);
 router.post('/refresh', authController.refresh);
 router.post('/logout', authenticate, authController.logout);
+router.post('/forgot-password', authRateLimit, authController.forgotPassword);
+router.post('/reset-password', authController.resetPassword);
 
 export default router;

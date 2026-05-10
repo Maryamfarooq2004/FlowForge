@@ -13,6 +13,7 @@ router.post('/', projectController.createProject);
 router.get('/:id', projectController.getProject);
 router.patch('/:id', projectController.updateProject);
 router.post('/:id/archive', projectController.archiveProject);
+router.post('/:id/duplicate', projectController.duplicateProject);
 router.delete('/:id', projectController.deleteProject);
 
 export default router;

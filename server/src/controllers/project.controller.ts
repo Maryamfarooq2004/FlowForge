@@ -94,3 +94,24 @@ export const deleteProject = async (req: Request, res: Response, next: NextFunct
     next(error);
   }
 };
+
+export const duplicateProject = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = (req as any).user._id;
+    const originalProject = await Project.findOne({ _id: req.params.id, userId });
+
+    if (!originalProject) return sendError(res, 'Project not found', 404);
+
+    const duplicatedProject = await Project.create({
+      name: `${originalProject.name} (Copy)`,
+      userId,
+      category: originalProject.category,
+      organizationName: originalProject.organizationName,
+      status: 'intake', // Reset status for the new copy
+    });
+
+    sendSuccess(res, duplicatedProject, 'Project duplicated successfully', 201);
+  } catch (error) {
+    next(error);
+  }
+};

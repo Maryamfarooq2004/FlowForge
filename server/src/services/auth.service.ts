@@ -142,3 +142,42 @@ export const logoutUser = async (userId: string, refreshToken: string) => {
     await user.save();
   }
 };
+
+export const forgotPassword = async (email: string) => {
+  const user = await User.findOne({ email });
+  
+  // SECURITY (BUG 3 FIX): Prevent email enumeration.
+  // Always return success even if user not found.
+  if (!user) return;
+
+  const resetToken = crypto.randomBytes(32).toString('hex');
+  user.passwordResetToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+  user.passwordResetExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+  
+  await user.save();
+
+  // In a real app, send the email here.
+  console.log(`Password Reset Token for ${email}: ${resetToken}`);
+};
+
+export const resetPassword = async (token: string, newPassword: string) => {
+  const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+  
+  const user = await User.findOne({
+    passwordResetToken: hashedToken,
+    passwordResetExpiry: { $gt: new Date() }
+  }).select('+passwordResetToken +passwordResetExpiry');
+
+  if (!user) {
+    throw { statusCode: 400, message: 'Invalid or expired reset token' };
+  }
+
+  user.password = newPassword;
+  user.passwordResetToken = undefined;
+  user.passwordResetExpiry = undefined;
+  
+  // SECURITY: Invalidate ALL refresh tokens on password change
+  user.refreshTokens = [];
+  
+  await user.save();
+};
