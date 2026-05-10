@@ -61,6 +61,7 @@ const RegisterPage: React.FC = () => {
   const onSubmit = async (data: RegisterFormValues) => {
     try {
       setServerError(null);
+      console.log('[Register] Submitting form data:', data);
       const response = await axiosInstance.post('/api/v1/auth/register', data);
       
       if (response.data.success) {

@@ -6,10 +6,12 @@ import { AppError } from '../utils/appError';
 
 export const register = async (data: any) => {
   const { fullName, email, orgType, password } = data;
+  console.log('[Service] Registering with:', { fullName, email, orgType, password: password ? '***' : 'MISSING' });
 
   // Step 1: Validate email format
   const emailRegex = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
   if (!emailRegex.test(email)) {
+    console.log('[Service] Invalid email format:', email);
     throw new AppError('Please provide a valid email address.', 400, 'INVALID_EMAIL_FORMAT');
   }
 
