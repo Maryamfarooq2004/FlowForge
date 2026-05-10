@@ -1,0 +1,21 @@
+version: '3.9'
+services:
+  server:
+    build: ./server
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=development
+    env_file:
+      - ./server/.env
+    volumes:
+      - ./server/src:/app/src
+    depends_on:
+      - python-service
+
+  python-service:
+    build: ./python-service
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./python-service:/app
