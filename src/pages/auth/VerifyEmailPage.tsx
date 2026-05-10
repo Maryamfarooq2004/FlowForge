@@ -9,8 +9,9 @@ import { toast } from 'react-hot-toast';
 import axiosInstance from '../../services/api/axiosInstance';
 
 const VerifyEmailPage: React.FC = () => {
-  const { token } = useParams<{ token: string }>();
-  const [state, setState] = useState<'loading' | 'success' | 'expired'>('loading');
+  const [state, setState] = useState<'loading' | 'success' | 'error'>('loading');
+  const [errorMsg, setErrorMsg] = useState('');
+  const [email, setEmail] = useState('');
   const [isResending, setIsResending] = useState(false);
   const hasCalled = useRef(false);
 
@@ -22,13 +23,29 @@ const VerifyEmailPage: React.FC = () => {
       try {
         await axiosInstance.get(`/api/v1/auth/verify-email?token=${token}`);
         setState('success');
-      } catch (error) {
-        setState('expired');
+      } catch (error: any) {
+        setState('error');
+        setErrorMsg(error.response?.data?.error || 'Verification failed');
       }
     };
 
     verifyToken();
   }, [token]);
+
+  const handleResend = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) return toast.error('Please enter your email');
+
+    setIsResending(true);
+    try {
+      await axiosInstance.post('/api/v1/auth/resend-verification', { email });
+      toast.success('Verification link sent!');
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Failed to resend link');
+    } finally {
+      setIsResending(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center p-6">
@@ -59,7 +76,7 @@ const VerifyEmailPage: React.FC = () => {
               <div className="space-y-2">
                 <h2 className="text-2xl font-bold text-slate-900 font-poppins">Your account is verified! ✅</h2>
                 <p className="text-slate-600">
-                  Welcome to FlowForge. Your account is now active and you can access your dashboard.
+                  Welcome to FlowForge. Your account is now active.
                 </p>
               </div>
 
@@ -71,29 +88,34 @@ const VerifyEmailPage: React.FC = () => {
             </div>
           )}
 
-          {state === 'expired' && (
-            <div className="space-y-6">
+          {state === 'error' && (
+            <div className="space-y-6 w-full">
               <div className="h-20 w-20 rounded-full border-2 border-amber-500 flex items-center justify-center mx-auto text-amber-500">
                 <Clock size={40} />
               </div>
               
               <div className="space-y-2">
-                <h2 className="text-2xl font-bold text-slate-900 font-poppins">Verification link expired</h2>
+                <h2 className="text-2xl font-bold text-slate-900 font-poppins">Verification failed</h2>
                 <p className="text-slate-600">
-                  This link has expired or has already been used. Please log in to request a new one if needed.
+                  {errorMsg}.
                 </p>
               </div>
 
-              <div className="space-y-4 w-full pt-4">
-                <Link to="/login" className="block w-full">
-                  <Button variant="default" className="w-full h-12 text-base font-semibold">
-                    Go to Login
-                  </Button>
-                </Link>
-                <p className="text-xs text-slate-400">
-                  You can resend the verification link from the login screen.
-                </p>
-              </div>
+              <form onSubmit={handleResend} className="space-y-4 w-full pt-4 text-left">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Email Address</label>
+                  <input 
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Enter your email to resend link"
+                    className="w-full h-12 px-4 rounded-xl border border-slate-200 focus:border-[#0F766E] focus:ring-1 focus:ring-[#0F766E] outline-none transition-all"
+                  />
+                </div>
+                <Button type="submit" isLoading={isResending} className="w-full h-12 text-base font-semibold">
+                  Resend Verification Email
+                </Button>
+              </form>
             </div>
           )}
         </div>
