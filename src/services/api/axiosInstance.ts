@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Fallback to hardcoded URL if env variable is missing
-const baseURL = import.meta.env.VITE_API_URL || 'https://flowforge-production-0fc1.up.railway.app';
+const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://flowforge-production-0fc1.up.railway.app';
 
 const axiosInstance = axios.create({
   baseURL,
