@@ -8,6 +8,7 @@ import { AuthLayout } from '../../components/layout/AuthLayout';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { useAuthStore } from '../../store/authStore';
+import authService from '../../services/authService';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 
@@ -57,34 +58,37 @@ const LoginPage: React.FC = () => {
     if (lockoutTimeLeft > 0) return;
     setLoginError(null);
     try {
-      await login(data);
-      // For this demo, we'll navigate to hub
+      const response = await authService.login(data);
+      const { user, accessToken } = response.data.data;
+      
+      useAuthStore.getState().setUser(user);
+      useAuthStore.getState().setAccessToken(accessToken);
+      useAuthStore.getState().setAuthenticated(true);
+      
       navigate('/hub');
-    } catch (error: any) {
-      const code = error.response?.data?.code;
-      const message = error.response?.data?.error || 'INVALID EMAIL OR PASSWORD';
+    } catch (err: any) {
+      const code = err.response?.data?.code;
+      const message = err.response?.data?.message || err.response?.data?.error || 'Login failed.';
       
       switch (code) {
+        case 'INVALID_CREDENTIALS':
+          setLoginError(message);
+          const newAttempts = failedAttempts + 1;
+          setFailedAttempts(newAttempts);
+          if (newAttempts >= 5) setLockoutTimeLeft(15 * 60);
+          break;
         case 'ACCOUNT_LOCKED':
           setLockoutTimeLeft(15 * 60);
           setFailedAttempts(5);
-          setLoginError(null);
+          setLoginError(message);
           break;
         case 'RATE_LIMITED':
           toast.error(message);
-          setLoginError(message.toUpperCase());
+          setLoginError(message);
           break;
-        case 'INVALID_CREDENTIALS':
         default:
-          const newAttempts = failedAttempts + 1;
-          setFailedAttempts(newAttempts);
-          
-          if (newAttempts >= 5 || message.includes('locked')) {
-            setLockoutTimeLeft(15 * 60);
-            setLoginError(null);
-          } else {
-            setLoginError(message.toUpperCase());
-          }
+          setLoginError('An unexpected error occurred. Please try again.');
+          console.error('Login error:', err.response?.data);
       }
     }
   };

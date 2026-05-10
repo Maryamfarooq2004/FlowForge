@@ -1,39 +1,39 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-import app from './app';
-import connectDB from './config/database';
-import { logger } from './utils/logger.utils';
-
-const PORT = process.env.PORT || 3001;
+import { createApp } from './app';
+import { connectDatabase } from './config/database';
 
 const startServer = async () => {
   try {
-    // 1. Connect to Database
-    await connectDB();
-
-    // 2. Start Listening
+    // 1. Connect database FIRST before anything else
+    await connectDatabase();
+    
+    const app = createApp();
+    
+    const PORT = process.env.PORT || 5000;
     app.listen(PORT, () => {
-      logger.info(`Server is running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+      console.log(`Server running on port ${PORT}`);
+      console.log(`Environment: ${process.env.NODE_ENV}`);
     });
-  } catch (error) {
-    logger.error('Failed to start server:', error);
+  } catch (err) {
+    console.error('Failed to start server:', err);
     process.exit(1);
   }
 };
 
+startServer();
+
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (err: Error) => {
-  logger.error('UNHANDLED REJECTION! 💥 Shutting down...');
-  logger.error(`${err.name}: ${err.message}`);
+  console.error('UNHANDLED REJECTION! 💥 Shutting down...');
+  console.error(`${err.name}: ${err.message}`);
   process.exit(1);
 });
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (err: Error) => {
-  logger.error('UNCAUGHT EXCEPTION! 💥 Shutting down...');
-  logger.error(`${err.name}: ${err.message}`);
+  console.error('UNCAUGHT EXCEPTION! 💥 Shutting down...');
+  console.error(`${err.name}: ${err.message}`);
   process.exit(1);
 });
-
-startServer();

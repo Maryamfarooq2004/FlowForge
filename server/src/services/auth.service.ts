@@ -1,204 +1,264 @@
 import crypto from 'crypto';
 import bcrypt from 'bcrypt';
-import { User } from '../models/User.model';
-import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../utils/jwt.utils';
-import { AppError } from '../utils/appError';
+import { User, IUser } from '../models/User.model';
+import { AppError } from '../utils/AppError';
+import {
+  generateAccessToken,
+  generateRefreshToken,
+  verifyRefreshToken,
+} from '../utils/jwt.utils';
 
-export const register = async (data: any) => {
-  const { fullName, email, orgType, password } = data;
-  console.log('[Service] Registering with:', { fullName, email, orgType, password: password ? '***' : 'MISSING' });
+const BCRYPT_ROUNDS = parseInt(process.env.BCRYPT_ROUNDS || '12');
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOCK_DURATION_MS = 15 * 60 * 1000; // 15 minutes
 
-  // Step 1: Validate email format
+// Helper: sanitize user for response (no sensitive fields)
+const sanitizeUser = (user: IUser) => ({
+  id: user._id.toString(),
+  fullName: user.fullName,
+  email: user.email,
+  orgType: user.orgType,
+  businessName: user.businessName,
+  logoUrl: user.logoUrl,
+  createdAt: user.createdAt,
+});
+
+// Helper: hash a refresh token for storage
+const hashToken = (token: string): string =>
+  crypto.createHash('sha256').update(token).digest('hex');
+
+// ── REGISTER ───────────────────────────────────────
+
+export const registerService = async (
+  fullName: string,
+  email: string,
+  orgType: 'clinic' | 'school',
+  password: string
+) => {
+  // 1. Validate email format
   const emailRegex = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
   if (!emailRegex.test(email)) {
-    console.log('[Service] Invalid email format:', email);
-    throw new AppError('Please provide a valid email address.', 400, 'INVALID_EMAIL_FORMAT');
+    throw new AppError('Please provide a valid email address.', 400, 'INVALID_EMAIL');
   }
 
-  // Step 2: Check email uniqueness
-  const existingUser = await User.findOne({ email: email.toLowerCase().trim() });
-  if (existingUser) {
-    throw new AppError(
-      'An account with this email already exists.', 
-      409, 
-      'EMAIL_ALREADY_EXISTS'
-    );
+  // 2. Validate password
+  if (password.length < 8) {
+    throw new AppError('Password must be at least 8 characters.', 400, 'WEAK_PASSWORD');
   }
-
-  // Step 3: Validate password strength
-  const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/;
-  if (!passwordRegex.test(password)) {
+  if (!/[A-Za-z]/.test(password) || !/[0-9]/.test(password)) {
     throw new AppError(
-      'Password must be at least 8 characters with at least one letter and one number.',
+      'Password must contain at least one letter and one number.',
       400,
       'WEAK_PASSWORD'
     );
   }
 
-  // Step 4: Create user — active immediately, no verification needed
-  // Note: Password hashing is handled by pre-save hook in User.model.ts
-  const user = await User.create({
-    fullName: fullName.trim(),
-    email: email.toLowerCase().trim(),
-    orgType,
-    password, // Pre-save hook hashes this
-    lastLoginAt: new Date()
-  });
+  // 3. Check existing email (explicit check before Mongoose to control error message)
+  const existing = await User.findOne({ email: email.toLowerCase().trim() });
+  if (existing) {
+    throw new AppError(
+      'An account with this email already exists.',
+      409,
+      'EMAIL_EXISTS'
+    );
+  }
 
-  // Step 5: Generate tokens
-  const accessToken = signAccessToken({ 
-    userId: user._id.toString(), 
-    email: user.email, 
-    role: user.role 
-  });
-  
-  const { token: refreshToken } = signRefreshToken(user._id.toString());
+  // 4. Hash password
+  const hashedPassword = await bcrypt.hash(password, BCRYPT_ROUNDS);
 
-  // Step 6: Store hashed refresh token
-  const hashedRefresh = crypto.createHash('sha256').update(refreshToken).digest('hex');
+  // 5. Create user
+  let user: IUser;
+  try {
+    user = await User.create({
+      fullName: fullName.trim(),
+      email: email.toLowerCase().trim(),
+      orgType,
+      password: hashedPassword,
+      lastLoginAt: new Date(),
+    });
+  } catch (err: any) {
+    // Catch race condition duplicate key (two simultaneous registrations)
+    if (err.code === 11000) {
+      throw new AppError(
+        'An account with this email already exists.',
+        409,
+        'EMAIL_EXISTS'
+      );
+    }
+    throw err;
+  }
+
+  // 6. Generate tokens
+  const accessToken = generateAccessToken(user._id.toString());
+  const refreshToken = generateRefreshToken(user._id.toString());
+
+  // 7. Store hashed refresh token
   await User.findByIdAndUpdate(user._id, {
-    $push: { refreshTokens: { token: hashedRefresh } }
+    $push: { refreshTokens: hashToken(refreshToken) },
   });
 
   return {
-    user: {
-      id: user._id.toString(),
-      fullName: user.fullName,
-      email: user.email,
-      orgType: user.orgType,
-      businessName: user.businessName,
-      logoUrl: user.logoUrl,
-      createdAt: user.createdAt
-    },
+    user: sanitizeUser(user),
     accessToken,
-    refreshToken
+    refreshToken,
   };
 };
 
-export const loginUser = async (credentials: any) => {
-  const { email, password } = credentials;
+// ── LOGIN ──────────────────────────────────────────
 
-  const user = await User.findOne({ email }).select('+password +lockUntil +loginAttempts');
-  
+export const loginService = async (
+  email: string,
+  password: string,
+  ip?: string
+) => {
+  // 1. Find user (explicitly select password and security fields)
+  const user = await User.findOne({ email: email.toLowerCase().trim() })
+    .select('+password +loginAttempts +lockUntil +refreshTokens');
+
   if (!user) {
-    throw new AppError('Invalid email or password', 401, 'INVALID_CREDENTIALS');
+    // Generic message — do not reveal whether email exists
+    throw new AppError('Invalid email or password.', 401, 'INVALID_CREDENTIALS');
   }
 
-  // Check if account is locked
-  if (user.lockUntil && user.lockUntil > new Date()) {
-    throw new AppError('Account is locked. Try again later.', 423, 'ACCOUNT_LOCKED');
+  // 2. Check account lock
+  if (user.isLocked()) {
+    const retryAfter = user.lockUntil
+      ? Math.ceil((user.lockUntil.getTime() - Date.now()) / 1000)
+      : 900;
+    throw new AppError(
+      `Account locked. Try again in ${Math.ceil(retryAfter / 60)} minutes.`,
+      423,
+      'ACCOUNT_LOCKED',
+    );
   }
 
-  const isMatch = await (user as any).comparePassword(password);
-  
+  // 3. Verify password
+  const isMatch = await user.comparePassword(password);
+
   if (!isMatch) {
-    user.loginAttempts += 1;
-    if (user.loginAttempts >= 5) {
-      user.lockUntil = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
+    // Increment failed attempts
+    const newAttempts = (user.loginAttempts || 0) + 1;
+    const updateData: Partial<IUser> =
+      newAttempts >= MAX_LOGIN_ATTEMPTS
+        ? {
+            loginAttempts: newAttempts,
+            lockUntil: new Date(Date.now() + LOCK_DURATION_MS),
+          }
+        : { loginAttempts: newAttempts };
+
+    await User.findByIdAndUpdate(user._id, updateData);
+
+    const remaining = MAX_LOGIN_ATTEMPTS - newAttempts;
+    if (remaining <= 0) {
+      throw new AppError(
+        'Too many failed attempts. Account locked for 15 minutes.',
+        423,
+        'ACCOUNT_LOCKED'
+      );
     }
-    await user.save();
-    throw new AppError('Invalid email or password', 401, 'INVALID_CREDENTIALS');
+    throw new AppError(
+      `Invalid email or password. ${remaining} attempt${remaining === 1 ? '' : 's'} remaining.`,
+      401,
+      'INVALID_CREDENTIALS'
+    );
   }
 
-  // Reset attempts
-  user.loginAttempts = 0;
-  user.lockUntil = undefined;
-  (user as any).lastLoginAt = new Date();
+  // 4. Successful login — reset lockout
+  const accessToken = generateAccessToken(user._id.toString());
+  const refreshToken = generateRefreshToken(user._id.toString());
 
-  // Generate tokens
-  const accessToken = signAccessToken({ 
-    userId: user._id.toString(), 
-    email: user.email, 
-    role: user.role 
+  // Keep max 5 refresh tokens (remove oldest if exceeded)
+  const currentTokens = user.refreshTokens || [];
+  const updatedTokens =
+    currentTokens.length >= 5
+      ? [...currentTokens.slice(-4), hashToken(refreshToken)]
+      : [...currentTokens, hashToken(refreshToken)];
+
+  await User.findByIdAndUpdate(user._id, {
+    loginAttempts: 0,
+    lockUntil: undefined,
+    refreshTokens: updatedTokens,
+    lastLoginAt: new Date(),
+    lastLoginIp: ip || 'unknown',
   });
-  
-  const { token: refreshToken } = signRefreshToken(user._id.toString());
 
-  // Store hashed refresh token
-  const hashedToken = crypto.createHash('sha256').update(refreshToken).digest('hex');
-  user.refreshTokens.push({ token: hashedToken });
-  
-  await user.save();
-
-  return { user, accessToken, refreshToken };
+  return {
+    user: sanitizeUser(user),
+    accessToken,
+    refreshToken,
+  };
 };
 
-export const rotateToken = async (oldRefreshToken: string) => {
-  try {
-    const decoded = verifyRefreshToken(oldRefreshToken);
-    const user = await User.findById(decoded.userId).select('+refreshTokens');
-    
-    if (!user) throw new Error();
+// ── REFRESH TOKEN ──────────────────────────────────
 
-    const hashedOldToken = crypto.createHash('sha256').update(oldRefreshToken).digest('hex');
-    const tokenIndex = user.refreshTokens.findIndex(rt => rt.token === hashedOldToken);
-
-    if (tokenIndex === -1) {
-      (user as any).refreshTokens = [];
-      await user.save();
-      throw new AppError('Security breach detected. Please login again.', 401, 'TOKEN_REUSE');
-    }
-
-    user.refreshTokens.splice(tokenIndex, 1);
-    
-    const accessToken = signAccessToken({ 
-      userId: user._id.toString(), 
-      email: user.email, 
-      role: user.role 
-    });
-    
-    const { token: newRefreshToken } = signRefreshToken(user._id.toString());
-    const hashedNewToken = crypto.createHash('sha256').update(newRefreshToken).digest('hex');
-    
-    user.refreshTokens.push({ token: hashedNewToken });
-    await user.save();
-
-    return { accessToken, refreshToken: newRefreshToken };
-  } catch (error: any) {
-    throw error instanceof AppError ? error : new AppError('Invalid refresh token', 401, 'INVALID_REFRESH_TOKEN');
+export const refreshTokenService = async (refreshToken: string) => {
+  if (!refreshToken) {
+    throw new AppError('No refresh token provided.', 401, 'NO_REFRESH_TOKEN');
   }
-};
 
-export const logoutUser = async (userId: string, refreshToken: string) => {
-  const user = await User.findById(userId).select('+refreshTokens');
-  if (user) {
-    const hashedToken = crypto.createHash('sha256').update(refreshToken).digest('hex');
-    (user as any).refreshTokens = user.refreshTokens.filter(rt => rt.token !== hashedToken);
-    await user.save();
-  }
-};
+  // Verify token signature and expiry
+  const payload = verifyRefreshToken(refreshToken);
 
-export const forgotPassword = async (email: string) => {
-  const user = await User.findOne({ email });
-  if (!user) return;
-
-  const resetToken = crypto.randomBytes(32).toString('hex');
-  user.passwordResetToken = crypto.createHash('sha256').update(resetToken).digest('hex');
-  user.passwordResetTokenExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
-  
-  await user.save();
-  
-  // NOTE: Email sending logic removed as requested. 
-  // In a real "forgot password" flow, you would normally send an email here.
-  console.log(`[DEBUG] Password reset link: https://flow-forge-k66k.vercel.app/reset-password/${resetToken}`);
-};
-
-export const resetPassword = async (token: string, newPassword: string) => {
-  const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
-  
-  const user = await User.findOne({
-    passwordResetToken: hashedToken,
-    passwordResetTokenExpires: { $gt: new Date() }
-  }).select('+passwordResetToken +passwordResetTokenExpires');
+  // Find user and check token exists in DB
+  const user = await User.findById(payload.userId)
+    .select('+refreshTokens');
 
   if (!user) {
-    throw new AppError('Invalid or expired reset token', 400, 'INVALID_RESET_TOKEN');
+    throw new AppError('User not found.', 401, 'INVALID_REFRESH_TOKEN');
   }
 
-  user.password = newPassword;
-  user.passwordResetToken = undefined;
-  user.passwordResetTokenExpires = undefined;
-  (user as any).refreshTokens = [];
-  
-  await user.save();
+  const hashedIncoming = hashToken(refreshToken);
+  const tokenExists = user.refreshTokens.includes(hashedIncoming);
+
+  if (!tokenExists) {
+    // Token reuse detected — clear ALL tokens (security measure)
+    await User.findByIdAndUpdate(payload.userId, { refreshTokens: [] });
+    throw new AppError(
+      'Refresh token reuse detected. Please log in again.',
+      401,
+      'TOKEN_REUSE_DETECTED'
+    );
+  }
+
+  // Rotate: remove old token, add new one
+  const newAccessToken = generateAccessToken(user._id.toString());
+  const newRefreshToken = generateRefreshToken(user._id.toString());
+
+  const updatedTokens = user.refreshTokens
+    .filter(t => t !== hashedIncoming)
+    .concat(hashToken(newRefreshToken));
+
+  await User.findByIdAndUpdate(user._id, { refreshTokens: updatedTokens });
+
+  return {
+    user: sanitizeUser(user),
+    accessToken: newAccessToken,
+    refreshToken: newRefreshToken,
+  };
+};
+
+// ── LOGOUT ─────────────────────────────────────────
+
+export const logoutService = async (refreshToken: string) => {
+  if (!refreshToken) return; // Already logged out
+
+  try {
+    const payload = verifyRefreshToken(refreshToken);
+    const hashedToken = hashToken(refreshToken);
+    await User.findByIdAndUpdate(payload.userId, {
+      $pull: { refreshTokens: hashedToken },
+    });
+  } catch {
+    // Token invalid or expired — still clear cookie on controller side
+  }
+};
+
+// ── GET ME ─────────────────────────────────────────
+
+export const getMeService = async (userId: string) => {
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new AppError('User not found.', 404, 'USER_NOT_FOUND');
+  }
+  return sanitizeUser(user);
 };

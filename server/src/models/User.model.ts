@@ -1,74 +1,99 @@
-import mongoose, { Schema } from 'mongoose';
+import mongoose, { Document, Schema } from 'mongoose';
 import bcrypt from 'bcrypt';
 
-const userSchema = new Schema({
-  fullName: { 
-    type: String, 
-    required: [true, 'Full name is required'], 
-    trim: true, 
-    maxlength: [100, 'Name cannot exceed 100 characters'] 
-  },
-  email: { 
-    type: String, 
-    required: [true, 'Email is required'], 
-    unique: true, 
-    lowercase: true, 
-    trim: true,
-    match: [/^\S+@\S+\.\S+$/, 'Please use a valid email address']
-  },
-  password: { 
-    type: String, 
-    required: [true, 'Password is required'], 
-    minlength: [8, 'Password must be at least 8 characters'], 
-    select: false 
-  },
-  orgType: { 
-    type: String, 
-    enum: { 
-      values: ['clinic', 'school'], 
-      message: 'Organization type must be clinic or school' 
-    }, 
-    required: [true, 'Organization type is required'] 
-  },
-  businessName: { type: String, trim: true },
-  logoUrl: { type: String },
-  role: { type: String, enum: ['user', 'admin'], default: 'user' },
-  loginAttempts: { type: Number, default: 0 },
-  lockUntil: { type: Date },
-  passwordResetToken: { type: String, select: false },
-  passwordResetTokenExpires: { type: Date, select: false },
-  refreshTokens: [{ 
-    token: String, 
-    createdAt: { type: Date, default: Date.now } 
-  }],
-  lastLoginAt: { type: Date },
-  lastLoginIp: { type: String },
-}, { 
-  timestamps: true 
-});
+export interface IUser extends Document {
+  fullName: string;
+  email: string;
+  password: string;
+  orgType: 'clinic' | 'school';
+  businessName?: string;
+  logoUrl?: string;
+  loginAttempts: number;
+  lockUntil?: Date;
+  refreshTokens: string[];
+  passwordResetToken?: string;
+  passwordResetTokenExpires?: Date;
+  lastLoginAt?: Date;
+  lastLoginIp?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  isLocked(): boolean;
+  comparePassword(candidatePassword: string): Promise<boolean>;
+}
 
-// SECURITY: Never return password or internal auth fields
-userSchema.methods.toJSON = function() {
-  const user = this.toObject();
-  delete user.password;
-  delete user.refreshTokens;
-  delete user.loginAttempts;
-  delete user.lockUntil;
-  delete user.passwordResetToken;
-  delete user.passwordResetTokenExpires;
-  return user;
+const userSchema = new Schema<IUser>(
+  {
+    fullName: {
+      type: String,
+      required: [true, 'Full name is required'],
+      trim: true,
+      minlength: [2, 'Name must be at least 2 characters'],
+      maxlength: [100, 'Name cannot exceed 100 characters'],
+    },
+    email: {
+      type: String,
+      required: [true, 'Email is required'],
+      unique: true,
+      lowercase: true,
+      trim: true,
+      match: [
+        /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/,
+        'Please provide a valid email address',
+      ],
+    },
+    password: {
+      type: String,
+      required: [true, 'Password is required'],
+      minlength: [8, 'Password must be at least 8 characters'],
+      select: false,
+    },
+    orgType: {
+      type: String,
+      enum: {
+        values: ['clinic', 'school'],
+        message: 'Organization type must be clinic or school',
+      },
+      required: [true, 'Organization type is required'],
+    },
+    businessName: { type: String, trim: true },
+    logoUrl: { type: String },
+    loginAttempts: { type: Number, default: 0 },
+    lockUntil: { type: Date },
+    refreshTokens: { type: [String], default: [], select: false },
+    passwordResetToken: { type: String, select: false },
+    passwordResetTokenExpires: { type: Date, select: false },
+    lastLoginAt: { type: Date },
+    lastLoginIp: { type: String },
+  },
+  {
+    timestamps: true,
+    toJSON: {
+      transform: (_doc, ret) => {
+        delete ret.password;
+        delete ret.refreshTokens;
+        delete ret.passwordResetToken;
+        delete ret.passwordResetTokenExpires;
+        delete ret.__v;
+        return ret;
+      },
+    },
+  }
+);
+
+// Indexes
+userSchema.index({ email: 1 }, { unique: true });
+userSchema.index({ lockUntil: 1 }, { expireAfterSeconds: 0 });
+
+// Instance method: check if account is locked
+userSchema.methods.isLocked = function (): boolean {
+  return !!(this.lockUntil && this.lockUntil > new Date());
 };
 
-// SECURITY: Hash password ONLY when modified
-userSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) return next();
-  this.password = await bcrypt.hash(this.password, 12);
-  next();
-});
-
-// Compare password method
-userSchema.methods.comparePassword = async function(candidatePassword: string): Promise<boolean> {
-  return await bcrypt.compare(candidatePassword, this.password);
+// Instance method: compare password
+userSchema.methods.comparePassword = async function (
+  candidatePassword: string
+): Promise<boolean> {
+  return bcrypt.compare(candidatePassword, this.password);
 };
 
-export const User = mongoose.model('User', userSchema);
+export const User = mongoose.model<IUser>('User', userSchema);

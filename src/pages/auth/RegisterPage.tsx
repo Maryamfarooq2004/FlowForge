@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
-import axiosInstance from '../../services/api/axiosInstance';
+import authService from '../../services/authService';
 import { useAuthStore } from '../../store/authStore';
 import { toast } from 'react-hot-toast';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -61,29 +61,42 @@ const RegisterPage: React.FC = () => {
   const onSubmit = async (data: RegisterFormValues) => {
     try {
       setServerError(null);
-      console.log('[Register] Submitting form data:', data);
-      const response = await axiosInstance.post('/api/v1/auth/register', data);
+      const response = await authService.register(data);
       
       if (response.data.success) {
-        toast.success('Registration successful!');
-        // Issue tokens and log in immediately
-        authStore.setUser(response.data.data.user);
-        authStore.setAuthenticated(true);
+        const { user, accessToken } = response.data.data;
+        useAuthStore.getState().setUser(user);
+        useAuthStore.getState().setAccessToken(accessToken);
+        useAuthStore.getState().setAuthenticated(true);
+
+        toast.success('Account created! Welcome to FlowForge.');
         navigate('/hub');
       }
-    } catch (error: any) {
-      const code = error.response?.data?.code;
-      const message = error.response?.data?.error || 'Registration failed. Please try again.';
+    } catch (err: any) {
+      const code = err.response?.data?.code;
+      const message = err.response?.data?.message || err.response?.data?.error || 'Registration failed.';
       
-      if (code === 'EMAIL_ALREADY_EXISTS') {
-        setError('email', { message: 'An account with this email already exists.' });
-      } else if (code === 'INVALID_EMAIL_FORMAT') {
-        setError('email', { message: 'Please enter a valid email address.' });
-      } else if (code === 'WEAK_PASSWORD') {
-        setError('password', { message: message });
-      } else {
-        setServerError(message);
-        toast.error(message);
+      switch (code) {
+        case 'EMAIL_EXISTS':
+        case 'EMAIL_ALREADY_EXISTS':
+          setError('email', { message: 'An account with this email already exists.' });
+          break;
+        case 'INVALID_EMAIL':
+        case 'INVALID_EMAIL_FORMAT':
+          setError('email', { message: 'Please enter a valid email address.' });
+          break;
+        case 'WEAK_PASSWORD':
+          setError('password', { message: message });
+          break;
+        case 'MISSING_FIELDS':
+          toast.error('Please fill in all required fields.');
+          break;
+        case 'RATE_LIMITED':
+          toast.error('Too many attempts. Please wait and try again.');
+          break;
+        default:
+          setServerError(message);
+          toast.error(message);
       }
     }
   };

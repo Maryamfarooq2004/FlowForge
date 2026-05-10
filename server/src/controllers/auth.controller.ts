@@ -1,137 +1,163 @@
 import { Request, Response, NextFunction } from 'express';
 import * as authService from '../services/auth.service';
-import { sendSuccess, sendError } from '../utils/response.utils';
 
-const ACCESS_TOKEN_OPTIONS = {
+const COOKIE_OPTIONS = {
   httpOnly: true,
   secure: true,
-  sameSite: 'none' as const,
-  maxAge: 8 * 60 * 60 * 1000, // 8 hours
-};
-
-const REFRESH_TOKEN_OPTIONS = {
-  httpOnly: true,
-  secure: true,
-  sameSite: 'none' as const,
-  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  sameSite: 'none' as const,  // REQUIRED for cross-domain (Railway + Vercel)
+  maxAge: 7 * 24 * 60 * 60 * 1000,
   path: '/',
 };
 
-export const register = async (req: Request, res: Response, next: NextFunction) => {
+const clearCookieOptions = {
+  httpOnly: true,
+  secure: true,
+  sameSite: 'none' as const,
+  path: '/',
+};
+
+// ── POST /auth/register ────────────────────────────
+
+export const register = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
   try {
     const { fullName, email, orgType, password } = req.body;
-    console.log(`[Auth] Registration attempt for: ${email}`);
-    console.log('[Auth] Body received:', JSON.stringify(req.body));
 
     if (!fullName || !email || !orgType || !password) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         code: 'MISSING_FIELDS',
-        message: 'All fields are required: fullName, email, orgType, password.'
+        message: 'fullName, email, orgType, and password are all required.',
       });
+      return;
     }
 
-    const result = await authService.register({ fullName, email, orgType, password });
-    console.log(`[Auth] Registration SUCCESS for: ${email}`);
+    const result = await authService.registerService(fullName, email, orgType, password);
 
-    res.cookie('refreshToken', result.refreshToken, REFRESH_TOKEN_OPTIONS);
-    
-    return res.status(201).json({
+    res.cookie('refreshToken', result.refreshToken, COOKIE_OPTIONS);
+
+    res.status(201).json({
       success: true,
       message: 'Account created successfully.',
       data: {
         user: result.user,
-        accessToken: result.accessToken
-      }
+        accessToken: result.accessToken,
+      },
     });
-  } catch (error) {
-    console.error(`[Auth] Registration ERROR:`, error);
-    next(error);
+  } catch (err) {
+    next(err);
   }
 };
 
-export const login = async (req: Request, res: Response, next: NextFunction) => {
+// ── POST /auth/login ───────────────────────────────
+
+export const login = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
   try {
-    console.log(`[Auth] Login attempt for: ${req.body.email}`);
-    console.log('[Auth] Login Body received:', JSON.stringify(req.body));
-    const { user, accessToken, refreshToken } = await authService.loginUser(req.body);
-    
-    res.cookie('accessToken', accessToken, ACCESS_TOKEN_OPTIONS);
-    res.cookie('refreshToken', refreshToken, REFRESH_TOKEN_OPTIONS);
-    
-    console.log(`[Auth] Login SUCCESS for: ${req.body.email}`);
-    sendSuccess(res, { user, accessToken }, 'Login successful');
-  } catch (error) {
-    console.error(`[Auth] Login ERROR:`, error);
-    next(error);
-  }
-};
+    const { email, password } = req.body;
 
-export const refresh = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const oldToken = req.cookies.refreshToken;
-    if (!oldToken) return sendError(res, 'Refresh token missing', 401);
-
-    const { accessToken, refreshToken } = await authService.rotateToken(oldToken);
-    
-    res.cookie('accessToken', accessToken, ACCESS_TOKEN_OPTIONS);
-    res.cookie('refreshToken', refreshToken, REFRESH_TOKEN_OPTIONS);
-    
-    sendSuccess(res, { accessToken }, 'Token refreshed');
-  } catch (error) {
-    res.clearCookie('accessToken', { ...ACCESS_TOKEN_OPTIONS, maxAge: 0 });
-    res.clearCookie('refreshToken', { ...REFRESH_TOKEN_OPTIONS, maxAge: 0 });
-    next(error);
-  }
-};
-
-export const getMe = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const user = (req as any).user;
-    if (!user) return sendError(res, 'Not authenticated', 401);
-    sendSuccess(res, { user }, 'User profile retrieved');
-  } catch (error) {
-    next(error);
-  }
-};
-
-export const logout = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const refreshToken = req.cookies.refreshToken;
-    const userId = (req as any).user?._id;
-
-    if (userId && refreshToken) {
-      await authService.logoutUser(userId, refreshToken);
+    if (!email || !password) {
+      res.status(400).json({
+        success: false,
+        code: 'MISSING_FIELDS',
+        message: 'Email and password are required.',
+      });
+      return;
     }
 
-    res.clearCookie('accessToken', { ...ACCESS_TOKEN_OPTIONS, maxAge: 0 });
-    res.clearCookie('refreshToken', { ...REFRESH_TOKEN_OPTIONS, maxAge: 0 });
-    sendSuccess(res, null, 'Logged out successfully');
-  } catch (error) {
-    next(error);
+    const ip = req.ip || req.socket.remoteAddress;
+    const result = await authService.loginService(email, password, ip);
+
+    res.cookie('refreshToken', result.refreshToken, COOKIE_OPTIONS);
+
+    res.status(200).json({
+      success: true,
+      message: 'Login successful.',
+      data: {
+        user: result.user,
+        accessToken: result.accessToken,
+      },
+    });
+  } catch (err) {
+    next(err);
   }
 };
 
-export const forgotPassword = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { email } = req.body;
-    if (!email) return sendError(res, 'Email is required', 400);
+// ── POST /auth/refresh-token ───────────────────────
 
-    await authService.forgotPassword(email);
-    sendSuccess(res, null, 'If an account exists with that email, a reset link has been sent.');
-  } catch (error) {
-    next(error);
+export const refreshToken = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    // Read from httpOnly cookie
+    const token = req.cookies?.refreshToken;
+
+    if (!token) {
+      res.status(401).json({
+        success: false,
+        code: 'NO_REFRESH_TOKEN',
+        message: 'No refresh token found.',
+      });
+      return;
+    }
+
+    const result = await authService.refreshTokenService(token);
+
+    // Set new refresh token cookie
+    res.cookie('refreshToken', result.refreshToken, COOKIE_OPTIONS);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        user: result.user,
+        accessToken: result.accessToken,
+      },
+    });
+  } catch (err) {
+    // Clear cookie on failure
+    res.clearCookie('refreshToken', clearCookieOptions);
+    next(err);
   }
 };
 
-export const resetPassword = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { token, password } = req.body;
-    if (!token || !password) return sendError(res, 'Token and password are required', 400);
+// ── POST /auth/logout ──────────────────────────────
 
-    await authService.resetPassword(token, password);
-    sendSuccess(res, null, 'Password updated successfully');
-  } catch (error) {
-    next(error);
+export const logout = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const token = req.cookies?.refreshToken;
+    await authService.logoutService(token);
+    res.clearCookie('refreshToken', clearCookieOptions);
+    res.status(200).json({ success: true, message: 'Logged out successfully.' });
+  } catch (err) {
+    res.clearCookie('refreshToken', clearCookieOptions);
+    next(err);
+  }
+};
+
+// ── GET /auth/me ───────────────────────────────────
+
+export const getMe = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    // req.userId is set by the protect middleware
+    const user = await authService.getMeService((req as any).userId);
+    res.status(200).json({ success: true, data: { user } });
+  } catch (err) {
+    next(err);
   }
 };

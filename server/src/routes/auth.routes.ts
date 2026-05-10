@@ -1,16 +1,35 @@
 import { Router } from 'express';
+import rateLimit from 'express-rate-limit';
 import * as authController from '../controllers/auth.controller';
-import { authRateLimit } from '../middleware/rateLimit.middleware';
-import { authenticate } from '../middleware/auth.middleware';
+import { protect } from '../middleware/auth.middleware';
 
 const router = Router();
 
-router.post('/register', authController.register);
-router.post('/login', authRateLimit, authController.login);
-router.post('/refresh', authController.refresh);
-router.get('/me', authenticate, authController.getMe);
-router.post('/logout', authenticate, authController.logout);
-router.post('/forgot-password', authRateLimit, authController.forgotPassword);
-router.post('/reset-password', authController.resetPassword);
+// Auth-specific rate limiter (stricter than global)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 15,
+  keyGenerator: (req) => {
+    // Key by email if provided, otherwise by IP
+    return (req.body?.email as string)?.toLowerCase() || req.ip || 'unknown';
+  },
+  message: {
+    success: false,
+    code: 'RATE_LIMITED',
+    message: 'Too many attempts. Please wait 15 minutes before trying again.',
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => req.method === 'OPTIONS',
+});
+
+// Public routes
+router.post('/register', authLimiter, authController.register);
+router.post('/login', authLimiter, authController.login);
+router.post('/refresh-token', authController.refreshToken);
+router.post('/logout', authController.logout);
+
+// Protected routes
+router.get('/me', protect, authController.getMe);
 
 export default router;
