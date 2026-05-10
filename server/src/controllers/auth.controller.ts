@@ -37,6 +37,19 @@ export const verifyEmail = async (req: Request, res: Response, next: NextFunctio
   }
 };
 
+export const resendVerification = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { email } = req.body;
+    if (!email) return sendError(res, 'Email is required', 400);
+
+    await authService.resendVerification(email);
+    // Security: Always return success to prevent email enumeration
+    sendSuccess(res, null, 'If that email is registered and unverified, a new link has been sent.');
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const login = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { user, accessToken, refreshToken } = await authService.loginUser(req.body);

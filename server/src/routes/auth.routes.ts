@@ -7,6 +7,7 @@ const router = Router();
 
 router.post('/register', authController.register);
 router.get('/verify-email', authController.verifyEmail);
+router.post('/resend-verification', authRateLimit, authController.resendVerification);
 router.post('/login', authRateLimit, authController.login);
 router.post('/refresh', authController.refresh);
 router.post('/logout', authenticate, authController.logout);

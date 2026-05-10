@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import bcrypt from 'bcrypt';
 import { User } from '../models/User.model';
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../utils/jwt.utils';
+import { sendEmail } from './email.service';
 
 export const registerUser = async (userData: any) => {
   const existingUser = await User.findOne({ email: userData.email });
@@ -19,8 +20,17 @@ export const registerUser = async (userData: any) => {
     emailVerificationExpiry: verificationExpiry,
   });
 
-  // TODO: Send email via SendGrid here in a real app
-  console.log(`Verification Token for ${user.email}: ${verificationToken}`);
+  const verifyUrl = `https://flow-forge-k66k.vercel.app/verify-email/${verificationToken}`;
+  const emailHtml = `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <h1 style="color: #0F766E;">Welcome to FlowForge!</h1>
+      <p>Thank you for registering. Please verify your email address to activate your account.</p>
+      <a href="${verifyUrl}" style="display: inline-block; padding: 12px 24px; background-color: #0F766E; color: white; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 20px 0;">Verify Email Address</a>
+      <p style="color: #64748B; font-size: 14px;">If the button doesn't work, copy and paste this link into your browser: <br/> ${verifyUrl}</p>
+    </div>
+  `;
+
+  await sendEmail(user.email, 'Verify your FlowForge Account', `Please verify your email: ${verifyUrl}`, emailHtml);
 
   return { message: 'Check your email to verify your account' };
 };
@@ -41,6 +51,29 @@ export const verifyEmail = async (token: string) => {
   await user.save();
 
   return { message: 'Email verified successfully' };
+};
+
+export const resendVerification = async (email: string) => {
+  const user = await User.findOne({ email });
+  if (!user || user.isEmailVerified) return; // Prevent enumeration and resending to verified users
+
+  const verificationToken = crypto.randomBytes(32).toString('hex');
+  const verificationExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+  user.emailVerificationToken = verificationToken;
+  user.emailVerificationExpiry = verificationExpiry;
+  await user.save();
+
+  const verifyUrl = `https://flow-forge-k66k.vercel.app/verify-email/${verificationToken}`;
+  const emailHtml = `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <h1 style="color: #0F766E;">Verify your FlowForge Account</h1>
+      <p>You requested a new verification link. Please click below to activate your account.</p>
+      <a href="${verifyUrl}" style="display: inline-block; padding: 12px 24px; background-color: #0F766E; color: white; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 20px 0;">Verify Email Address</a>
+    </div>
+  `;
+
+  await sendEmail(user.email, 'Verify your FlowForge Account', `Please verify your email: ${verifyUrl}`, emailHtml);
 };
 
 export const loginUser = async (credentials: any) => {
@@ -156,8 +189,17 @@ export const forgotPassword = async (email: string) => {
   
   await user.save();
 
-  // In a real app, send the email here.
-  console.log(`Password Reset Token for ${email}: ${resetToken}`);
+  const resetUrl = `https://flow-forge-k66k.vercel.app/reset-password/${resetToken}`;
+  const emailHtml = `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <h1 style="color: #0F766E;">Password Reset Request</h1>
+      <p>We received a request to reset your password. Click the button below to choose a new password.</p>
+      <a href="${resetUrl}" style="display: inline-block; padding: 12px 24px; background-color: #0F766E; color: white; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 20px 0;">Reset Password</a>
+      <p style="color: #64748B; font-size: 14px;">This link will expire in 1 hour. If you didn't request this, you can safely ignore this email.</p>
+    </div>
+  `;
+
+  await sendEmail(user.email, 'FlowForge Password Reset', `Reset your password: ${resetUrl}`, emailHtml);
 };
 
 export const resetPassword = async (token: string, newPassword: string) => {

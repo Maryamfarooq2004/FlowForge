@@ -9,6 +9,8 @@ import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { useAuthStore } from '../../store/authStore';
 import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'react-hot-toast';
+import axiosInstance from '../../services/api/axiosInstance';
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -22,6 +24,7 @@ const LoginPage: React.FC = () => {
   const [loginError, setLoginError] = useState<string | null>(null);
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [lockoutTimeLeft, setLockoutTimeLeft] = useState(0);
+  const [isResending, setIsResending] = useState(false);
   const { login, isLoading } = useAuthStore();
   const navigate = useNavigate();
 
@@ -78,6 +81,23 @@ const LoginPage: React.FC = () => {
       } else {
         setLoginError(message.toUpperCase());
       }
+    }
+  };
+
+  const handleResendVerification = async () => {
+    const email = watch('email');
+    if (!email) {
+      toast.error('Please enter your email address first');
+      return;
+    }
+    try {
+      setIsResending(true);
+      await axiosInstance.post('/api/v1/auth/resend-verification', { email });
+      toast.success('Verification email resent! Please check your inbox.');
+    } catch (error) {
+      toast.error('Failed to resend email. Please try again later.');
+    } finally {
+      setIsResending(false);
     }
   };
 
@@ -162,10 +182,24 @@ const LoginPage: React.FC = () => {
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 flex items-center space-x-3 text-red-700"
+              className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 flex flex-col space-y-2 text-red-700 overflow-hidden"
             >
-              <AlertCircle className="h-5 w-5 shrink-0" />
-              <span className="text-xs font-semibold uppercase tracking-wide">{loginError}</span>
+              <div className="flex items-center space-x-3">
+                <AlertCircle className="h-5 w-5 shrink-0" />
+                <span className="text-xs font-semibold uppercase tracking-wide">{loginError}</span>
+              </div>
+              {loginError.includes('VERIFY YOUR EMAIL') && (
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleResendVerification}
+                  isLoading={isResending}
+                  className="w-full mt-2 border-red-200 text-red-700 hover:bg-red-100"
+                >
+                  Resend Verification Email
+                </Button>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
