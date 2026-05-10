@@ -114,7 +114,6 @@ const AdminDashboardPage: React.FC = () => {
             <div className="space-y-4">
               {[
                 { name: 'Google Gemini API', status: 'Operational', color: 'bg-green-500' },
-                { name: 'SendGrid', status: 'Operational', color: 'bg-green-500' },
                 { name: 'Vercel Deploy API', status: 'Operational', color: 'bg-green-500' },
                 { name: 'Railway API', status: 'Degraded Performance', color: 'bg-amber-500', isWarning: true },
               ].map((api, i) => (
