@@ -4,10 +4,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, MessageSquare, Bot, Rocket, Building2, School, ArrowRight } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { cn } from '../../utils/classNames';
+import { useAuthStore } from '../../store/authStore';
 
 export const OnboardingPage: React.FC = () => {
   const [step, setStep] = useState(1);
   const navigate = useNavigate();
+  const user = useAuthStore(state => state.user);
 
   const handleNext = () => setStep(prev => prev + 1);
 
@@ -39,7 +41,7 @@ export const OnboardingPage: React.FC = () => {
               </motion.div>
 
               <h1 className="text-[40px] md:text-[48px] font-black text-slate-900 font-poppins mb-6 leading-tight">
-                Welcome to FlowForge, <span className="text-[#0F766E]">Dr. Sara!</span> 👋
+                Welcome to FlowForge, <span className="text-[#0F766E]">{user?.fullName || 'User'}!</span> 👋
               </h1>
               
               <p className="text-lg md:text-xl text-slate-500 max-w-2xl mx-auto mb-16 leading-relaxed">

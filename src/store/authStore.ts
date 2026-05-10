@@ -7,6 +7,7 @@ interface User {
   organizationType: 'clinic' | 'school';
   businessName?: string;
   logoUrl?: string;
+  role?: 'user' | 'admin';
   createdAt: string;
 }
 

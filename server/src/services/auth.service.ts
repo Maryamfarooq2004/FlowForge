@@ -141,9 +141,9 @@ export const loginService = async (
     const updateData: Partial<IUser> =
       newAttempts >= MAX_LOGIN_ATTEMPTS
         ? {
-            loginAttempts: newAttempts,
-            lockUntil: new Date(Date.now() + LOCK_DURATION_MS),
-          }
+          loginAttempts: newAttempts,
+          lockUntil: new Date(Date.now() + LOCK_DURATION_MS),
+        }
         : { loginAttempts: newAttempts };
 
     await User.findByIdAndUpdate(user._id, updateData);
@@ -261,3 +261,6 @@ export const getMeService = async (userId: string) => {
   }
   return sanitizeUser(user);
 };
+
+ 
+ 

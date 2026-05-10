@@ -1,6 +1,21 @@
 import { Request, Response, NextFunction } from 'express';
 import { Project } from '../models/Project.model';
+import { IntakeQuestion } from '../models/IntakeQuestion.model';
 import { sendSuccess, sendError } from '../utils/response.utils';
+
+export const getQuestions = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { category } = req.query;
+    if (!category) return sendError(res, 'Category is required', 400);
+
+    const questions = await IntakeQuestion.find({ category })
+      .sort({ order: 1 });
+
+    sendSuccess(res, questions, 'Questions retrieved successfully');
+  } catch (error) {
+    next(error);
+  }
+};
 
 export const saveIntakeForm = async (req: Request, res: Response, next: NextFunction) => {
   try {

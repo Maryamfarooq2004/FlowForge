@@ -2,7 +2,11 @@ import mongoose from 'mongoose';
 import bcrypt from 'bcrypt';
 import dotenv from 'dotenv';
 import path from 'path';
+import dns from 'dns';
 import { User } from '../models/User.model';
+
+// Fix for Atlas DNS resolution issues
+dns.setServers(['8.8.8.8', '1.1.1.1']);
 // We'll create a simple Project model if it doesn't exist yet or use collection directly
 import { ObjectId } from 'mongodb';
 
@@ -119,7 +123,7 @@ async function seedDatabase() {
         updatedAt: new Date('2026-05-09T15:30:00Z'),
       },
       {
-        _id: new ObjectId('6b007777777777777777gggg'),
+        _id: new ObjectId('6b0077777777777777771234'),
         fullName: 'Usman Farhan',
         email: 'usman@newuser.com',
         password: hashedPassword,
@@ -135,7 +139,7 @@ async function seedDatabase() {
         updatedAt: new Date('2026-05-10T17:00:00Z'),
       },
       {
-        _id: new ObjectId('6b008888888888888888hhhh'),
+        _id: new ObjectId('6b0088888888888888885678'),
         fullName: 'FlowForge Admin',
         email: 'admin@flowforge.app',
         password: hashedPassword,
@@ -149,11 +153,33 @@ async function seedDatabase() {
         createdAt: new Date('2026-01-01T00:00:00Z'),
         updatedAt: new Date('2026-01-01T00:00:00Z'),
       },
+      {
+        _id: new ObjectId('6b0099999999999999999999'),
+        fullName: 'Dr. Maryam Farooq',
+        email: 'maryam@alshifaclinic.com',
+        password: hashedPassword,
+        organizationType: 'clinic',
+        businessName: 'Al-Shifa Medical Center',
+        role: 'user',
+        isEmailVerified: true,
+        loginAttempts: 0,
+        refreshTokens: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
     ];
 
     // Seed Users
     for (const u of seedUsers) {
-      await User.updateOne({ email: u.email }, { $set: u }, { upsert: true });
+      const { _id, ...updateData } = u;
+      await User.updateOne(
+        { email: u.email },
+        { 
+          $set: updateData,
+          $setOnInsert: { _id } 
+        },
+        { upsert: true }
+      );
     }
     console.log('Seed users inserted/updated');
 

@@ -2,21 +2,26 @@ import React from 'react';
 import { useParams, Navigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { CloseEndedForm } from '../../components/features/intake/CloseEndedForm';
-import { CLINIC_INTAKE_QUESTIONS } from '../../data/clinicIntakeForm';
-import { SCHOOL_INTAKE_QUESTIONS } from '../../data/schoolIntakeForm';
 import projectService from '../../services/projectService';
+import intakeService from '../../services/intakeService';
 import { Skeleton } from '../../components/ui/Skeleton';
 
 const IntakeFormPage: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
 
-  const { data: project, isLoading, error } = useQuery({
+  const { data: project, isLoading: isProjectLoading, error: projectError } = useQuery({
     queryKey: ['project', projectId],
     queryFn: () => projectService.getById(projectId!),
     enabled: !!projectId,
   });
 
-  if (isLoading) {
+  const { data: questions, isLoading: isQuestionsLoading, error: questionsError } = useQuery({
+    queryKey: ['intakeQuestions', project?.category],
+    queryFn: () => intakeService.getQuestions(project!.category as 'clinic' | 'school'),
+    enabled: !!project?.category,
+  });
+
+  if (isProjectLoading || isQuestionsLoading) {
     return (
       <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6">
         <Skeleton className="h-8 w-64 mb-4" />
@@ -25,13 +30,9 @@ const IntakeFormPage: React.FC = () => {
     );
   }
 
-  if (error || !project) {
+  if (projectError || !project || questionsError || !questions) {
     return <Navigate to="/hub" />;
   }
-
-  const questions = project.category === 'clinic' 
-    ? CLINIC_INTAKE_QUESTIONS 
-    : SCHOOL_INTAKE_QUESTIONS;
 
   return (
     <CloseEndedForm 

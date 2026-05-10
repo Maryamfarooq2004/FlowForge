@@ -6,6 +6,7 @@ const router = Router();
 
 router.use(protect);
 
+router.get('/questions', intakeController.getQuestions);
 router.patch('/:projectId/form', intakeController.saveIntakeForm);
 
 export default router;
