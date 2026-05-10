@@ -71,15 +71,35 @@ const LoginPage: React.FC = () => {
         navigate('/hub');
       }
     } catch (error: any) {
+      const code = error.response?.data?.code;
       const message = error.response?.data?.error || 'INVALID EMAIL OR PASSWORD';
-      const newAttempts = failedAttempts + 1;
-      setFailedAttempts(newAttempts);
       
-      if (newAttempts >= 5 || message.includes('locked')) {
-        setLockoutTimeLeft(15 * 60);
-        setLoginError(null);
-      } else {
-        setLoginError(message.toUpperCase());
+      switch (code) {
+        case 'ACCOUNT_LOCKED':
+          // Convert the retryAfter ISO string back to seconds left if needed
+          // Or just fall back to the 15 min lock
+          setLockoutTimeLeft(15 * 60);
+          setFailedAttempts(5);
+          setLoginError(null);
+          break;
+        case 'EMAIL_NOT_VERIFIED':
+          setLoginError('EMAIL_NOT_VERIFIED: ' + message.toUpperCase());
+          break;
+        case 'RATE_LIMITED':
+          toast.error(message);
+          setLoginError(message.toUpperCase());
+          break;
+        case 'INVALID_CREDENTIALS':
+        default:
+          const newAttempts = failedAttempts + 1;
+          setFailedAttempts(newAttempts);
+          
+          if (newAttempts >= 5 || message.includes('locked')) {
+            setLockoutTimeLeft(15 * 60);
+            setLoginError(null);
+          } else {
+            setLoginError(message.toUpperCase());
+          }
       }
     }
   };
@@ -186,9 +206,11 @@ const LoginPage: React.FC = () => {
             >
               <div className="flex items-center space-x-3">
                 <AlertCircle className="h-5 w-5 shrink-0" />
-                <span className="text-xs font-semibold uppercase tracking-wide">{loginError}</span>
+                <span className="text-xs font-semibold uppercase tracking-wide">
+                  {loginError.replace('EMAIL_NOT_VERIFIED: ', '')}
+                </span>
               </div>
-              {loginError.includes('VERIFY YOUR EMAIL') && (
+              {loginError.includes('EMAIL_NOT_VERIFIED') && (
                 <Button 
                   type="button" 
                   variant="outline" 

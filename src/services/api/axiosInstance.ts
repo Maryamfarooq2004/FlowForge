@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-// Force Railway URL to bypass any Vercel environment variables
-const baseURL = 'https://flowforge-production-0fc1.up.railway.app';
+// Fallback to hardcoded URL if env variable is missing
+const baseURL = import.meta.env.VITE_API_URL || 'https://flowforge-production-0fc1.up.railway.app';
 
 const axiosInstance = axios.create({
   baseURL,
@@ -12,22 +12,43 @@ const axiosInstance = axios.create({
 });
 
 // Response interceptor for handling 401s
+let isRefreshing = false;
+let refreshQueue: Array<() => void> = [];
+
 axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
     if (error.response?.status === 401 && !originalRequest._retry) {
+      if (isRefreshing) {
+        // Queue this request until refresh completes
+        return new Promise((resolve) => {
+          refreshQueue.push(() => {
+            resolve(axiosInstance(originalRequest));
+          });
+        });
+      }
+
       originalRequest._retry = true;
+      isRefreshing = true;
       
       try {
         // Attempt to refresh token via backend httpOnly cookie
         await axios.post(`${baseURL}/api/v1/auth/refresh`, {}, { withCredentials: true });
+        
+        // Retry all queued requests
+        refreshQueue.forEach(cb => cb());
+        refreshQueue = [];
+        
         return axiosInstance(originalRequest);
       } catch (refreshError) {
-        // If refresh fails, redirect to login
+        // If refresh fails, clear queue and redirect
+        refreshQueue = [];
         window.location.href = '/login';
         return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
       }
     }
 

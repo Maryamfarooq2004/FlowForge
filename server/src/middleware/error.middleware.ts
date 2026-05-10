@@ -5,6 +5,7 @@ import { logger } from '../utils/logger.utils';
 export interface AppError extends Error {
   statusCode?: number;
   isOperational?: boolean;
+  code?: string | number;
 }
 
 export const errorMiddleware = (
@@ -13,7 +14,30 @@ export const errorMiddleware = (
   res: Response,
   next: NextFunction
 ): void => {
-  const statusCode = err.statusCode || 500;
+  let statusCode = err.statusCode || 500;
+  let message = err.message;
+  let code = err.code;
+
+  // Handle MongoDB Duplicate Key Error (BUG 2 (a))
+  if (err.code === 11000) {
+    statusCode = 409;
+    code = 'EMAIL_ALREADY_EXISTS';
+    message = 'An account with this email already exists.';
+  }
+
+  // Handle Mongoose Validation Error (BUG 2 (b))
+  if (err.name === 'ValidationError') {
+    statusCode = 400;
+    code = 'VALIDATION_ERROR';
+    message = Object.values((err as any).errors || {}).map((e: any) => e.message).join(', ') || 'Validation error';
+  }
+
+  // Handle Mongoose Cast Error (BUG 2 (b))
+  if (err.name === 'CastError') {
+    statusCode = 400;
+    code = 'CAST_ERROR';
+    message = 'Invalid ID or data format';
+  }
   
   // Log all errors internally
   logger.error({
@@ -39,7 +63,8 @@ export const errorMiddleware = (
 
   res.status(statusCode).json({
     success: false,
-    error: err.message,
+    code: code || undefined,
+    error: message,
     ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
   });
 };

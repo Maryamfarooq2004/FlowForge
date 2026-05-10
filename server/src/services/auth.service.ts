@@ -30,7 +30,12 @@ export const registerUser = async (userData: any) => {
     </div>
   `;
 
-  await sendEmail(user.email, 'Verify your FlowForge Account', `Please verify your email: ${verifyUrl}`, emailHtml);
+  try {
+    await sendEmail(user.email, 'Verify your FlowForge Account', `Please verify your email: ${verifyUrl}`, emailHtml);
+  } catch (emailError) {
+    // Log the error but DO NOT throw, as the user was successfully created
+    console.error('SendGrid failed:', emailError);
+  }
 
   return { message: 'Check your email to verify your account' };
 };
@@ -87,7 +92,7 @@ export const loginUser = async (credentials: any) => {
 
   // Check if account is locked
   if (user.lockUntil && user.lockUntil > new Date()) {
-    throw { statusCode: 403, message: 'Account is locked. Try again later.' };
+    throw { statusCode: 423, code: 'ACCOUNT_LOCKED', message: 'Account is locked. Try again later.', retryAfter: user.lockUntil };
   }
 
   const isMatch = await (user as any).comparePassword(password);
@@ -98,11 +103,11 @@ export const loginUser = async (credentials: any) => {
       user.lockUntil = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
     }
     await user.save();
-    throw { statusCode: 401, message: 'Invalid email or password' };
+    throw { statusCode: 401, code: 'INVALID_CREDENTIALS', message: 'Invalid email or password' };
   }
 
   if (!user.isEmailVerified) {
-    throw { statusCode: 403, message: 'Please verify your email before logging in.' };
+    throw { statusCode: 403, code: 'EMAIL_NOT_VERIFIED', message: 'Please verify your email before logging in.' };
   }
 
   // Reset attempts

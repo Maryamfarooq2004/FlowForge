@@ -9,14 +9,22 @@ export const generalRateLimit = rateLimit({
   message: { success: false, error: 'Too many requests. Please try again later.' },
 });
 
-// Auth endpoints: 5 attempts per 15 minutes (brute force protection)
+// Auth endpoints: 10 attempts per 15 minutes (brute force protection)
 export const authRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 5,
+  max: 10,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { success: false, error: 'Too many login attempts. Please try again in 15 minutes.' },
-  skipSuccessfulRequests: true,  // Only count failed attempts
+  message: { success: false, code: 'RATE_LIMITED', error: 'Too many attempts. Please try again in 15 minutes.' },
+});
+
+// Resend verification: 3 requests per hour
+export const resendRateLimit = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 3,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, code: 'RATE_LIMITED', error: 'Too many resend attempts. Please try again in an hour.' },
 });
 
 // File upload: 10 uploads per hour

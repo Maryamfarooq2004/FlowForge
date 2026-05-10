@@ -17,9 +17,12 @@ interface AuthStore {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isInitialized: boolean;
   login: (credentials: any) => Promise<void>;
   logout: () => void;
   setUser: (user: User) => void;
+  setInitialized: (val: boolean) => void;
+  clearAuth: () => void;
   refreshToken: () => Promise<void>;
 }
 
@@ -27,6 +30,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
   user: null,
   isAuthenticated: false,
   isLoading: false,
+  isInitialized: false,
   login: async (credentials) => {
     set({ isLoading: true });
     try {
@@ -51,6 +55,8 @@ export const useAuthStore = create<AuthStore>((set) => ({
     }
   },
   setUser: (user) => set({ user, isAuthenticated: !!user }),
+  setInitialized: (val) => set({ isInitialized: val }),
+  clearAuth: () => set({ user: null, isAuthenticated: false }),
   refreshToken: async () => {
     try {
       const response = await axiosInstance.post('/api/v1/auth/refresh');

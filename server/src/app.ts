@@ -4,6 +4,8 @@ import cors from 'cors';
 import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 import { initSentry, sentryErrorHandler } from './config/sentry';
+import mongoSanitize from 'express-mongo-sanitize';
+import xss from 'xss-clean';
 import { errorMiddleware } from './middleware/error.middleware';
 import { generalRateLimit } from './middleware/rateLimit.middleware';
 import { logger } from './utils/logger.utils';
@@ -28,25 +30,39 @@ app.use(helmet({
   referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
 }));
 
-// 3. CORS — BUG 2 FIX: Specify exact origins, never use '*' in production
+// 3. CORS — BUG 1 (c) FIX: Specify exact origins and handle preflight
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'https://flow-forge-k66k.vercel.app'
+];
+
 app.use(cors({
   origin: (origin, callback) => {
-    const allowedOrigins = (process.env.ALLOWED_ORIGINS || '').split(',');
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      callback(new Error(`CORS: Origin ${origin} not allowed`));
+      callback(new Error(`CORS blocked: ${origin}`));
     }
   },
-  credentials: true,             // Required for httpOnly cookies
+  credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['X-Total-Count'],
+  maxAge: 86400
 }));
+
+// CRITICAL: Handle preflight for ALL routes (BUG 1 (b))
+app.options('*', cors());
 
 // 4. Body parsers — BUG 5 FIX: with size limits to prevent DoS
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
+
+// LOOPHOLE 4 FIX: Input Sanitization
+app.use(mongoSanitize());
+app.use(xss());
 
 // 5. Rate limiting on all routes (BUG 3 FIX)
 app.use(generalRateLimit);
