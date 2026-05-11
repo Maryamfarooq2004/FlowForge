@@ -281,6 +281,38 @@ export const CloseEndedForm: React.FC<CloseEndedFormProps> = ({
                   </div>
                 )}
 
+                {q.type === 'slider' && (
+                  <div className="space-y-4 px-2">
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      step="5"
+                      value={formValues[q.id] || 0}
+                      onChange={(e) => updateField(q.id, parseInt(e.target.value))}
+                      className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-[#0F766E]"
+                    />
+                    <div className="flex justify-between text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                      <span>Low Priority</span>
+                      <span className="text-[#0F766E] bg-teal-50 px-2 py-0.5 rounded-md">
+                        Value: {formValues[q.id] || 0}%
+                      </span>
+                      <span>High Priority</span>
+                    </div>
+                  </div>
+                )}
+
+                {q.type === 'date' && (
+                  <input
+                    type="date"
+                    value={formValues[q.id] || ''}
+                    onChange={(e) => updateField(q.id, e.target.value)}
+                    className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-xl text-[14px]
+                               focus:outline-none focus:ring-2 focus:ring-[#0F766E]/10 focus:border-[#0F766E]
+                               focus:bg-white transition-all"
+                  />
+                )}
+
                 {q.type === 'yes_no_detail' && (
                   <div className="grid grid-cols-2 gap-4">
                     {[
