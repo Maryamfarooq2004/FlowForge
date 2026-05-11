@@ -95,6 +95,8 @@ export const createApp = (): Application => {
   app.use('/api/v1/admin', adminRoutes);
   app.use('/api/v1/intake', intakeRoutes);
   app.use('/api/v1/projects', projectRoutes);
+  // Nested route: /api/v1/projects/:projectId/intake
+  app.use('/api/v1/projects/:projectId/intake', intakeRoutes);
   // ── STEP 10: 404 handler
   app.use((req, res) => {
     res.status(404).json({

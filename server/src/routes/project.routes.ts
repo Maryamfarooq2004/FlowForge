@@ -1,34 +1,55 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { protect } from '../middleware/auth.middleware';
 import * as ps from '../services/project.service';
+import { Project } from '../models/Project.model';
 
 const router = Router();
-// All project routes require authentication
 router.use(protect);
 
-router.get('/', async (req: Request, res: Response, next: NextFunction) => {
+const uid = (req: Request) => (req as any).userId as string;
+
+// Get all projects for logged-in user (real MongoDB data)
+router.get('/', async (req, res, next) => {
   try {
-    const userId = (req as any).userId;
-    const result = await ps.getProjectsService(userId, req.query as any);
+    const result = await ps.getProjectsService(uid(req), req.query as any);
     res.json({ success: true, data: result });
-  } catch (err) { next(err); }
+  } catch (e) { next(e); }
 });
 
-router.get('/archived', async (req: Request, res: Response, next: NextFunction) => {
+// Check if first-time user (no projects)
+router.get('/first-time-check', async (req, res, next) => {
   try {
-    const items = await ps.getArchivedProjectsService((req as any).userId);
+    const isFirstTime = await ps.isFirstTimeUserService(uid(req));
+    res.json({ success: true, data: { isFirstTime } });
+  } catch (e) { next(e); }
+});
+
+// Get archived projects
+router.get('/archived', async (req, res, next) => {
+  try {
+    const items = await ps.getArchivedProjectsService(uid(req));
     res.json({ success: true, data: { items } });
-  } catch (err) { next(err); }
+  } catch (e) { next(e); }
 });
 
-router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
+// Get single project
+router.get('/:id', async (req, res, next) => {
   try {
-    const project = await ps.getProjectService((req as any).userId, req.params.id as string);
+    const project = await ps.getProjectService(uid(req), req.params.id);
     res.json({ success: true, data: { project } });
-  } catch (err) { next(err); }
+  } catch (e) { next(e); }
 });
 
-router.post('/', async (req: Request, res: Response, next: NextFunction) => {
+// Get resume point for a project
+router.get('/:id/resume', async (req, res, next) => {
+  try {
+    const result = await ps.getResumePointService(uid(req), req.params.id);
+    res.json({ success: true, data: result });
+  } catch (e) { next(e); }
+});
+
+// Create project (saves to MongoDB, returns real _id)
+router.post('/', async (req, res, next) => {
   try {
     const { name, domain } = req.body;
     if (!name || !domain) {
@@ -37,52 +58,56 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
         message: 'name and domain are required.'
       });
     }
-    const project = await ps.createProjectService((req as any).userId, name, domain);
+    const project = await ps.createProjectService(uid(req), name, domain);
     res.status(201).json({ success: true, data: { project } });
-  } catch (err) { next(err); }
+  } catch (e) { next(e); }
 });
 
-router.patch('/:id', async (req: Request, res: Response, next: NextFunction) => {
+// Update project progress
+router.patch('/:id/progress', async (req, res, next) => {
   try {
-    const project = await ps.updateProjectService(
-      (req as any).userId, req.params.id as string, req.body
+    const { phase, lastActiveScreen, completedStep } = req.body;
+    const project = await ps.updateProjectProgressService(
+      uid(req), req.params.id, phase, lastActiveScreen, completedStep
     );
     res.json({ success: true, data: { project } });
-  } catch (err) { next(err); }
+  } catch (e) { next(e); }
 });
 
-router.delete('/:id', async (req: Request, res: Response, next: NextFunction) => {
+// Archive
+router.patch('/:id/archive', async (req, res, next) => {
   try {
-    await ps.deleteProjectService((req as any).userId, req.params.id as string);
+    const project = await ps.archiveProjectService(uid(req), req.params.id);
+    res.json({ success: true, data: { project } });
+  } catch (e) { next(e); }
+});
+
+// Restore
+router.patch('/:id/restore', async (req, res, next) => {
+  try {
+    const project = await ps.updateProjectProgressService(
+      uid(req), req.params.id,
+      'intake_form', '', undefined
+    );
+    await Project.findByIdAndUpdate(req.params.id, { isArchived: false });
+    res.json({ success: true, data: { project } });
+  } catch (e) { next(e); }
+});
+
+// Duplicate
+router.post('/:id/duplicate', async (req, res, next) => {
+  try {
+    const project = await ps.duplicateProjectService(uid(req), req.params.id);
+    res.status(201).json({ success: true, data: { project } });
+  } catch (e) { next(e); }
+});
+
+// Delete
+router.delete('/:id', async (req, res, next) => {
+  try {
+    await ps.deleteProjectService(uid(req), req.params.id);
     res.json({ success: true, message: 'Project deleted.' });
-  } catch (err) { next(err); }
-});
-
-router.post('/:id/duplicate', async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const project = await ps.duplicateProjectService(
-      (req as any).userId, req.params.id as string
-    );
-    res.status(201).json({ success: true, data: { project } });
-  } catch (err) { next(err); }
-});
-
-router.patch('/:id/archive', async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const project = await ps.archiveProjectService(
-      (req as any).userId, req.params.id as string
-    );
-    res.json({ success: true, data: { project } });
-  } catch (err) { next(err); }
-});
-
-router.patch('/:id/restore', async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const project = await ps.updateProjectService(
-      (req as any).userId, req.params.id as string, { isArchived: false } as any
-    );
-    res.json({ success: true, data: { project } });
-  } catch (err) { next(err); }
+  } catch (e) { next(e); }
 });
 
 export default router;

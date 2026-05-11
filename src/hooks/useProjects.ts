@@ -1,180 +1,159 @@
 import {
-  useQuery,
-  useMutation,
-  useQueryClient,
+  useQuery, useMutation, useQueryClient,
 } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import projectService from '../services/projectService';
-import type { Project, CreateProjectDto, UpdateProjectDto } from '../types/project.types';
-import type { ApiError } from '../types/global.types';
+import type { Project } from '../types/project.types';
 
-// Query key factory — keeps all cache keys consistent
 export const projectKeys = {
-  all: ['projects'] as const,
-  lists: () => [...projectKeys.all, 'list'] as const,
-  list: (filters?: object) => [...projectKeys.lists(), filters] as const,
-  archived: () => [...projectKeys.all, 'archived'] as const,
-  details: () => [...projectKeys.all, 'detail'] as const,
-  detail: (id: string) => [...projectKeys.details(), id] as const,
+  all:        ['projects'] as const,
+  lists:      () => [...projectKeys.all, 'list'] as const,
+  list:       (f?: object) => [...projectKeys.lists(), f] as const,
+  archived:   () => [...projectKeys.all, 'archived'] as const,
+  details:    () => [...projectKeys.all, 'detail'] as const,
+  detail:     (id: string) => [...projectKeys.details(), id] as const,
+  firstTime:  () => [...projectKeys.all, 'first-time'] as const,
 };
 
-// ── GET ALL PROJECTS ──────────────────────────────────────────
-
-export const useProjects = (filters?: {
-  status?: string;
-  domain?: string;
-  page?: number;
-  limit?: number;
-}) => {
-  return useQuery({
+// ── REAL PROJECTS FROM MONGODB ─────────────────────────────────
+export const useProjects = (filters?: Record<string, any>) =>
+  useQuery({
     queryKey: projectKeys.list(filters),
     queryFn: async () => {
-      const response = await projectService.getProjects(filters);
-      return response.data.data;
+      const res = await projectService.getProjects(filters);
+      return res.data.data;
     },
     select: (data) => ({
       projects: data?.items ?? [],
       pagination: data?.pagination,
     }),
   });
-};
 
-// ── GET SINGLE PROJECT ────────────────────────────────────────
+// ── FIRST TIME USER CHECK ──────────────────────────────────────
+export const useIsFirstTimeUser = () =>
+  useQuery({
+    queryKey: projectKeys.firstTime(),
+    queryFn: async () => {
+      const res = await projectService.isFirstTimeUser();
+      return res.data.data?.isFirstTime ?? true;
+    },
+    staleTime: 0, // Always fresh — check every time
+  });
 
-export const useProject = (id: string | undefined) => {
-  return useQuery({
+// ── SINGLE PROJECT ─────────────────────────────────────────────
+export const useProject = (id: string | undefined) =>
+  useQuery({
     queryKey: projectKeys.detail(id!),
     queryFn: async () => {
-      const response = await projectService.getProject(id!);
-      return response.data.data?.project;
+      const res = await projectService.getProject(id!);
+      return res.data.data?.project;
     },
-    enabled: !!id,  // Only run if ID exists
+    enabled: !!id,
+  });
+
+// ── RESUME POINT ───────────────────────────────────────────────
+export const useResumeProject = () => {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (projectId: string) => projectService.getResumePoint(projectId),
+    onSuccess: (res) => {
+      const { route, project } = res.data.data!;
+      // Cache the project data before navigating
+      queryClient.setQueryData(projectKeys.detail(project.id), project);
+      navigate(route);
+    },
+    onError: () => {
+      toast.error('Failed to open project. Please try again.');
+    },
   });
 };
 
-// ── GET ARCHIVED PROJECTS ─────────────────────────────────────
-
-export const useArchivedProjects = () => {
-  return useQuery({
-    queryKey: projectKeys.archived(),
-    queryFn: async () => {
-      const response = await projectService.getArchivedProjects();
-      return response.data.data?.items ?? [];
-    },
-  });
-};
-
-// ── CREATE PROJECT ────────────────────────────────────────────
-
+// ── CREATE PROJECT (saves to MongoDB) ─────────────────────────
 export const useCreateProject = () => {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   return useMutation({
-    mutationFn: (data: CreateProjectDto) => projectService.createProject(data),
-    onSuccess: (response) => {
-      const newProject = response.data.data?.project;
-      // Invalidate and refetch projects list
+    mutationFn: projectService.createProject,
+    onSuccess: (res) => {
+      const project = res.data.data?.project;
+      if (!project) return;
+      // Invalidate projects list so hub shows new project
       queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
-      toast.success('Project created successfully!');
-      return newProject;
+      queryClient.invalidateQueries({ queryKey: projectKeys.firstTime() });
+      toast.success('Project created!');
+      // Navigate to intake form with REAL project ID from MongoDB
+      navigate(`/project/${project.id}/intake/form`);
     },
-    onError: (error: ApiError) => {
-      const message = error.response?.data?.message || 'Failed to create project.';
-      toast.error(message);
-    },
-  });
-};
-
-// ── UPDATE PROJECT ────────────────────────────────────────────
-
-export const useUpdateProject = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: UpdateProjectDto }) =>
-      projectService.updateProject(id, data),
-    onSuccess: (response, variables) => {
-      const updatedProject = response.data.data?.project;
-      // Update specific project in cache
-      queryClient.setQueryData(
-        projectKeys.detail(variables.id),
-        updatedProject
-      );
-      // Invalidate lists to reflect changes
-      queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
-    },
-    onError: (error: ApiError) => {
-      toast.error(error.response?.data?.message || 'Failed to update project.');
-    },
-  });
-};
-
-// ── DELETE PROJECT ────────────────────────────────────────────
-
-export const useDeleteProject = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (id: string) => projectService.deleteProject(id),
-    onMutate: async (id) => {
-      // Cancel outgoing refetches
-      await queryClient.cancelQueries({ queryKey: projectKeys.lists() });
-      // Snapshot current data for rollback
-      const previousProjects = queryClient.getQueryData(projectKeys.lists());
-      // Optimistically remove from cache
-      queryClient.setQueriesData(
-        { queryKey: projectKeys.lists() },
-        (old: any) => ({
-          ...old,
-          projects: old?.projects?.filter((p: Project) => (p.id || p._id) !== id) ?? [],
-        })
-      );
-      return { previousProjects };
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
-      toast.success('Project deleted.');
-    },
-    onError: (error: ApiError, _id, context) => {
-      // Rollback optimistic update
-      if (context?.previousProjects) {
-        queryClient.setQueryData(projectKeys.lists(), context.previousProjects);
+    onError: (err: any) => {
+      const code = err.response?.data?.code;
+      if (code === 'DUPLICATE_NAME') {
+        return { error: 'You already have a project with this name.' };
       }
-      toast.error(error.response?.data?.message || 'Failed to delete project.');
+      toast.error(err.response?.data?.message || 'Failed to create project.');
     },
   });
 };
 
-// ── DUPLICATE PROJECT ─────────────────────────────────────────
-
-export const useDuplicateProject = () => {
+// ── UPDATE PROGRESS ────────────────────────────────────────────
+export const useUpdateProgress = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: string) => projectService.duplicateProject(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
-      toast.success('Project duplicated successfully!');
-    },
-    onError: (error: ApiError) => {
-      toast.error(error.response?.data?.message || 'Failed to duplicate project.');
+    mutationFn: ({
+      projectId, phase, lastActiveScreen, completedStep
+    }: {
+      projectId: string;
+      phase: string;
+      lastActiveScreen: string;
+      completedStep?: string;
+    }) => projectService.updateProgress(projectId, {
+      phase, lastActiveScreen, completedStep
+    }),
+    onSuccess: (res, variables) => {
+      queryClient.setQueryData(
+        projectKeys.detail(variables.projectId),
+        res.data.data?.project
+      );
     },
   });
 };
 
-// ── ARCHIVE PROJECT ───────────────────────────────────────────
-
+// ── ARCHIVE ────────────────────────────────────────────────────
 export const useArchiveProject = () => {
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: (id: string) => projectService.archiveProject(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: projectKeys.all });
       toast.success('Project archived.');
     },
-    onError: (error: ApiError) => {
-      toast.error(error.response?.data?.message || 'Failed to archive project.');
+  });
+};
+
+// ── DUPLICATE ──────────────────────────────────────────────────
+export const useDuplicateProject = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => projectService.duplicateProject(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
+      toast.success('Project duplicated!');
+    },
+  });
+};
+
+// ── DELETE ─────────────────────────────────────────────────────
+export const useDeleteProject = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => projectService.deleteProject(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
+      toast.success('Project deleted.');
     },
   });
 };

@@ -1,49 +1,43 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Plus, FolderOpen } from 'lucide-react';
-import { useProjects, useArchiveProject, useDeleteProject, useDuplicateProject } from '../../hooks/useProjects';
+import { Plus, FolderOpen, Sparkles } from 'lucide-react';
+import {
+  useProjects,
+  useIsFirstTimeUser,
+  useResumeProject,
+  useArchiveProject,
+  useDeleteProject,
+  useDuplicateProject,
+} from '../../hooks/useProjects';
 import { useAuthStore } from '../../store/authStore';
-import { CreateProjectModal } from '../../features/projects/components/CreateProjectModal';
 import { ProjectCard } from '../../features/projects/components/ProjectCard';
 import { ProjectCardSkeleton } from '../../features/projects/components/ProjectCardSkeleton';
-import type { Project } from '../../types/project.types';
+import { CreateProjectModal } from '../../features/projects/components/CreateProjectModal';
 
 export default function ProjectHubPage() {
-  const navigate = useNavigate();
-  const { user } = useAuthStore();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'all' | 'archived'>('all');
 
-  // ── FETCH DATA FROM MONGODB VIA REACT QUERY ──────────────
-  const {
-    data,
-    isLoading,
-    isError,
-    error,
-    refetch,
-  } = useProjects();
+  // REAL user data from MongoDB via auth store
+  const { user } = useAuthStore();
 
+  // REAL projects from MongoDB — filtered to this user only
+  const { data, isLoading, isError, refetch } = useProjects();
   const projects = data?.projects ?? [];
 
+  // Check if first time user (no projects in DB)
+  const { data: isFirstTime, isLoading: checkingFirstTime } = useIsFirstTimeUser();
+
+  // Mutations
+  const { mutate: resumeProject, isPending: isResuming } = useResumeProject();
   const { mutate: archiveProject } = useArchiveProject();
-  const { mutate: deleteProject } = useDeleteProject();
+  const { mutate: deleteProject }  = useDeleteProject();
   const { mutate: duplicateProject } = useDuplicateProject();
 
-  const handleOpenProject = (project: Project) => {
-    navigate(`/project/${project.id || project._id}/intake/form`);
-  };
-
-  // ── LOADING STATE ─────────────────────────────────────────
-  if (isLoading) {
+  // ── LOADING ───────────────────────────────────────────────────
+  if (isLoading || checkingFirstTime) {
     return (
       <div className="p-8">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <div className="h-8 w-48 bg-slate-200 rounded-lg animate-pulse" />
-            <div className="h-4 w-64 bg-slate-100 rounded-lg animate-pulse mt-2" />
-          </div>
-          <div className="h-10 w-36 bg-slate-200 rounded-lg animate-pulse" />
-        </div>
+        <div className="h-8 w-48 bg-slate-200 rounded-lg animate-pulse mb-8" />
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {Array.from({ length: 6 }).map((_, i) => (
             <ProjectCardSkeleton key={i} />
@@ -53,24 +47,15 @@ export default function ProjectHubPage() {
     );
   }
 
-  // ── ERROR STATE ───────────────────────────────────────────
+  // ── ERROR ─────────────────────────────────────────────────────
   if (isError) {
-    const errMsg = (error as any)?.response?.data?.message || 'Failed to load projects.';
     return (
-      <div className="p-8 flex flex-col items-center justify-center min-h-[60vh]">
-        <div className="bg-white rounded-2xl border border-red-100 p-10 text-center max-w-md">
-          <div className="w-16 h-16 bg-red-50 rounded-full flex items-center 
-                          justify-center mx-auto mb-4">
-            <span className="text-3xl">⚠️</span>
-          </div>
-          <h3 className="text-lg font-semibold text-slate-800 mb-2">
-            Failed to Load Projects
-          </h3>
-          <p className="text-sm text-slate-500 mb-6">{errMsg}</p>
+      <div className="p-8 flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <p className="text-slate-600 mb-4">Failed to load your projects.</p>
           <button
             onClick={() => refetch()}
-            className="bg-[#0F766E] text-white px-6 py-2.5 rounded-lg 
-                       text-sm font-medium hover:bg-[#0D6B63] transition-colors"
+            className="bg-[#0F766E] text-white px-6 py-2.5 rounded-xl text-sm font-medium"
           >
             Try Again
           </button>
@@ -79,46 +64,65 @@ export default function ProjectHubPage() {
     );
   }
 
-  // ── EMPTY STATE ───────────────────────────────────────────
-  const EmptyState = () => (
-    <div className="col-span-full flex flex-col items-center justify-center 
-                    py-20 text-center">
-      <div className="w-20 h-20 bg-teal-50 rounded-2xl flex items-center 
-                      justify-center mb-4">
-        <FolderOpen className="w-10 h-10 text-[#0F766E]" />
+  // ── FIRST TIME USER — ONBOARDING WELCOME ─────────────────────
+  // ONLY show if user has ZERO projects in MongoDB
+  if (isFirstTime && projects.length === 0) {
+    return (
+      <div className="p-8 flex flex-col items-center justify-center min-h-[70vh]">
+        <div className="max-w-lg text-center">
+          {/* Uses REAL user name from MongoDB, never hardcoded */}
+          <div className="w-16 h-16 bg-teal-50 rounded-2xl flex items-center 
+                          justify-center mx-auto mb-6">
+            <Sparkles className="w-8 h-8 text-[#0F766E]" />
+          </div>
+          <h1 className="text-3xl font-bold text-slate-900 font-poppins mb-3">
+            Welcome, {user?.fullName?.split(' ')[0] ?? 'there'}! 👋
+          </h1>
+          <p className="text-slate-500 text-base mb-2">
+            You are all set up with FlowForge.
+          </p>
+          <p className="text-slate-400 text-sm mb-8">
+            Create your first project to start converting your{' '}
+            <span className="font-medium text-slate-600">
+              {user?.orgType === 'clinic' ? 'clinic' : 'school'}
+            </span>
+            {' '}workflow into a production-ready application.
+          </p>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="bg-[#0F766E] hover:bg-[#0D6B63] text-white px-8 py-3.5 
+                       rounded-xl font-semibold text-base transition-colors
+                       flex items-center gap-2.5 mx-auto shadow-sm"
+          >
+            <Plus className="w-5 h-5" />
+            Create Your First Project
+          </button>
+          <p className="text-xs text-slate-400 mt-4">
+            Takes less than 30 minutes · No technical knowledge required
+          </p>
+        </div>
+        <CreateProjectModal
+          isOpen={showCreateModal}
+          onClose={() => setShowCreateModal(false)}
+        />
       </div>
-      <h3 className="text-lg font-semibold text-slate-800 mb-2">
-        No projects yet
-      </h3>
-      <p className="text-sm text-slate-500 mb-6 max-w-xs">
-        Create your first project to start generating your business application.
-      </p>
-      <button
-        onClick={() => setShowCreateModal(true)}
-        className="bg-[#0F766E] text-white px-6 py-2.5 rounded-lg 
-                   text-sm font-semibold hover:bg-[#0D6B63] transition-colors
-                   flex items-center gap-2"
-      >
-        <Plus className="w-4 h-4" />
-        Create First Project
-      </button>
-    </div>
-  );
+    );
+  }
 
-  // ── LOADED STATE ──────────────────────────────────────────
+  // ── RETURNING USER — SHOW REAL PROJECTS ───────────────────────
   return (
     <div className="p-8">
-      {/* Page Header */}
+      {/* Header — uses REAL user name from MongoDB */}
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 font-poppins">
-            My Projects
+            {/* Real name from auth store — populated from MongoDB */}
+            Welcome back, {user?.fullName?.split(' ')[0] ?? 'there'}
           </h1>
           <p className="text-sm text-slate-500 mt-1">
-            Welcome back, {user?.fullName?.split(' ')[0]}. 
-            {projects.length > 0
-              ? ` You have ${projects.length} active project${projects.length !== 1 ? 's' : ''}.`
-              : ' Create your first project to get started.'}
+            {projects.length === 1
+              ? 'You have 1 active project.'
+              : `You have ${projects.length} active projects.`}
           </p>
         </div>
         <button
@@ -141,17 +145,15 @@ export default function ProjectHubPage() {
             className={`px-4 py-2.5 text-sm font-medium capitalize transition-colors
               ${activeTab === tab
                 ? 'text-[#0F766E] border-b-2 border-[#0F766E]'
-                : 'text-slate-500 hover:text-slate-700'
-              }`}
+                : 'text-slate-500 hover:text-slate-700'}`}
           >
             {tab === 'all' ? 'All Projects' : 'Archived'}
           </button>
         ))}
       </div>
 
-      {/* Projects Grid */}
+      {/* REAL Projects Grid — from MongoDB, filtered by logged-in user */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {/* Create new card */}
         <button
           onClick={() => setShowCreateModal(true)}
           className="border-2 border-dashed border-slate-300 rounded-2xl p-8
@@ -166,24 +168,30 @@ export default function ProjectHubPage() {
           <span className="text-sm font-medium">Create New Project</span>
         </button>
 
-        {/* Real project cards from MongoDB */}
         {projects.length === 0 ? (
-          <EmptyState />
+          <div className="col-span-2 flex items-center justify-center py-16">
+            <div className="text-center">
+              <FolderOpen className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+              <p className="text-slate-500 text-sm">No projects yet.</p>
+            </div>
+          </div>
         ) : (
+          // Each card shows REAL project data from MongoDB
           projects.map((project) => (
             <ProjectCard
-              key={project.id || project._id}
+              key={project.id}
               project={project}
-              onOpen={() => handleOpenProject(project)}
-              onDuplicate={() => duplicateProject(project.id || project._id!)}
-              onArchive={() => archiveProject(project.id || project._id!)}
-              onDelete={() => deleteProject(project.id || project._id!)}
+              isResuming={isResuming}
+              // Clicking open → fetches resume point from DB → navigates
+              onOpen={() => resumeProject(project.id)}
+              onDuplicate={() => duplicateProject(project.id)}
+              onArchive={() => archiveProject(project.id)}
+              onDelete={() => deleteProject(project.id)}
             />
           ))
         )}
       </div>
 
-      {/* Create Project Modal */}
       <CreateProjectModal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}

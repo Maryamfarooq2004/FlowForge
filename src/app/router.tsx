@@ -50,7 +50,38 @@ export const router = createBrowserRouter([
       
       // Intake Flow
       { path: 'project/:projectId/intake/form', element: withSuspense(IntakeFormPage) },
-      { path: 'project/:projectId/intake/story', element: withSuspense(GuidedIntakePage) },
+      { 
+        path: 'project/:projectId/intake/story', 
+        element: (
+          <Suspense fallback={<LoadingScreen />}>
+            <GuidedIntakePage screenSlug="story" />
+          </Suspense>
+        ) 
+      },
+      { 
+        path: 'project/:projectId/intake/roles', 
+        element: (
+          <Suspense fallback={<LoadingScreen />}>
+            <GuidedIntakePage screenSlug="roles" />
+          </Suspense>
+        ) 
+      },
+      { 
+        path: 'project/:projectId/intake/data', 
+        element: (
+          <Suspense fallback={<LoadingScreen />}>
+            <GuidedIntakePage screenSlug="data" />
+          </Suspense>
+        ) 
+      },
+      { 
+        path: 'project/:projectId/intake/rules', 
+        element: (
+          <Suspense fallback={<LoadingScreen />}>
+            <GuidedIntakePage screenSlug="rules" />
+          </Suspense>
+        ) 
+      },
       { path: 'project/:projectId/intake/review', element: withSuspense(IntakeReviewPage) },
     ],
   },

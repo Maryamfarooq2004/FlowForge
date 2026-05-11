@@ -1,43 +1,57 @@
 import axiosInstance from '../lib/axios';
-import type { Project, CreateProjectDto, UpdateProjectDto } from '../types/project.types';
 import type { ApiResponse, PaginatedResponse } from '../types/api.types';
+import type { Project } from '../types/project.types';
 
 const projectService = {
-  // GET all projects for logged-in user
-  getProjects: (params?: { status?: string; domain?: string; page?: number; limit?: number }) =>
-    axiosInstance.get<ApiResponse<PaginatedResponse<Project>>>('/projects', { params }),
+  // Real data from MongoDB for logged-in user
+  getProjects: (params?: Record<string, any>) =>
+    axiosInstance.get<ApiResponse<PaginatedResponse<Project>>>(
+      '/projects', { params }
+    ),
 
-  // GET single project by ID
+  // Check if this is the user's first time (no projects)
+  isFirstTimeUser: () =>
+    axiosInstance.get<ApiResponse<{ isFirstTime: boolean }>>(
+      '/projects/first-time-check'
+    ),
+
+  // Get single project
   getProject: (id: string) =>
     axiosInstance.get<ApiResponse<{ project: Project }>>(`/projects/${id}`),
 
-  // POST create new project
-  createProject: (data: CreateProjectDto) =>
+  // Get resume point — returns exact route + loaded project data
+  getResumePoint: (id: string) =>
+    axiosInstance.get<ApiResponse<{
+      route: string;
+      phase: string;
+      project: Project;
+    }>>(`/projects/${id}/resume`),
+
+  // Create — saves to MongoDB, returns real _id
+  createProject: (data: { name: string; domain: 'clinic' | 'school' }) =>
     axiosInstance.post<ApiResponse<{ project: Project }>>('/projects', data),
 
-  // PATCH update project
-  updateProject: (id: string, data: UpdateProjectDto) =>
-    axiosInstance.patch<ApiResponse<{ project: Project }>>(`/projects/${id}`, data),
+  // Update progress tracking
+  updateProgress: (id: string, data: {
+    phase: string;
+    lastActiveScreen: string;
+    completedStep?: string;
+  }) =>
+    axiosInstance.patch<ApiResponse<{ project: Project }>>(
+      `/projects/${id}/progress`, data
+    ),
 
-  // DELETE project
-  deleteProject: (id: string) =>
-    axiosInstance.delete<ApiResponse<null>>(`/projects/${id}`),
+  archiveProject:   (id: string) =>
+    axiosInstance.patch(`/projects/${id}/archive`),
 
-  // PATCH duplicate project
   duplicateProject: (id: string) =>
-    axiosInstance.post<ApiResponse<{ project: Project }>>(`/projects/${id}/duplicate`),
+    axiosInstance.post(`/projects/${id}/duplicate`),
 
-  // PATCH archive project
-  archiveProject: (id: string) =>
-    axiosInstance.patch<ApiResponse<{ project: Project }>>(`/projects/${id}/archive`),
+  deleteProject:    (id: string) =>
+    axiosInstance.delete(`/projects/${id}`),
 
-  // PATCH restore archived project
-  restoreProject: (id: string) =>
-    axiosInstance.patch<ApiResponse<{ project: Project }>>(`/projects/${id}/restore`),
-
-  // GET archived projects
   getArchivedProjects: () =>
-    axiosInstance.get<ApiResponse<PaginatedResponse<Project>>>('/projects/archived'),
+    axiosInstance.get<ApiResponse<{ items: Project[] }>>('/projects/archived'),
 };
 
 export default projectService;

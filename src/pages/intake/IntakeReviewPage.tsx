@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { Logo } from '../../components/shared/Logo';
 import { Avatar } from '../../components/ui/Avatar';
 import { Button } from '../../components/ui/Button';
 import intakeService from '../../services/intakeService';
+import { useIntakeBundle } from '../../hooks/useIntake';
 import { 
   Bell, 
   BookOpen, 
   Users, 
   BarChart2, 
-  Scale, 
   ClipboardList, 
   CheckCircle2, 
   AlertTriangle,
@@ -28,17 +28,12 @@ const IntakeReviewPage: React.FC = () => {
   const navigate = useNavigate();
   const { projectId } = useParams<{ projectId: string }>();
   const { user } = useAuthStore();
-  const [assembling, setAssembling] = useState(false);
 
-  // Fetch intake bundle data
-  const { data: bundle, isLoading } = useQuery({
-    queryKey: ['intakeBundle', projectId],
-    queryFn: () => intakeService.getIntake(projectId!),
-    enabled: !!projectId,
-  });
+  // Fetch intake bundle data from MongoDB
+  const { data: bundle, isLoading } = useIntakeBundle(projectId);
 
   const assembleMutation = useMutation({
-    mutationFn: () => intakeService.assembleBundle(projectId!),
+    mutationFn: () => (intakeService as any).assembleBundle(projectId!),
     onSuccess: (data) => {
       if (data.isValidated) {
         toast.success('Workflow bundle assembled successfully!');
@@ -69,10 +64,10 @@ const IntakeReviewPage: React.FC = () => {
     );
   }
 
-  const wordCount = bundle?.bundleJson?.metadata?.totalWordCount || 0;
-  const rolesCount = (bundle?.screen2PeopleRoles?.match(/\b(receptionist|doctor|nurse|manager|admin|teacher|principal|staff|cashier|coordinator|head|officer)\b/gi) || []).length;
-  const isFormComplete = bundle?.status && ['form_complete', 'screens_complete', 'assembled'].includes(bundle.status);
-  const screensCompleted = bundle?.completedScreens?.length || 0;
+  const wordCount = bundle?.guidedScreens?.reduce((acc, s) => acc + s.content.split(/\s+/).length, 0) || 0;
+  const rolesCount = bundle?.guidedScreens?.find(s => s.screen === 2)?.confirmedItems?.length || 0;
+  const isFormComplete = bundle?.structuredFormComplete;
+  const screensCompleted = bundle?.guidedScreens?.filter(s => s.isComplete).length || 0;
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col overflow-hidden">
@@ -107,14 +102,14 @@ const IntakeReviewPage: React.FC = () => {
             </p>
           </div>
 
-          {assembleMutation.data?.validationErrors && assembleMutation.data.validationErrors.length > 0 && (
+          {(assembleMutation.data as any)?.validationErrors && (assembleMutation.data as any).validationErrors.length > 0 && (
             <div className="bg-red-50 border border-red-200 rounded-2xl p-6 space-y-3">
               <div className="flex items-center space-x-2 text-red-800 font-bold">
                 <AlertCircle size={20} />
                 <span>Validation Errors Detected</span>
               </div>
               <ul className="list-disc list-inside text-sm text-red-700 space-y-1">
-                {assembleMutation.data.validationErrors.map((err, i) => (
+                {(assembleMutation.data as any).validationErrors.map((err: string, i: number) => (
                   <li key={i}>{err}</li>
                 ))}
               </ul>

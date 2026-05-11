@@ -1,27 +1,70 @@
-import { Router } from 'express';
-import * as intakeController from '../controllers/intake.controller';
+import { Router, Request, Response, NextFunction } from 'express';
 import { protect } from '../middleware/auth.middleware';
+import * as is from '../services/intake.service';
 
-const router = Router();
-
-// All intake routes require authentication
+const router = Router({ mergeParams: true });
 router.use(protect);
 
-// ── Questions ─────────────────────────────────────────────────────────────────
-// GET /api/v1/intake/questions?category=clinic|school
-router.get('/questions', intakeController.getQuestions);
+const uid = (req: Request) => (req as any).userId as string;
 
-// ── Per-project intake ────────────────────────────────────────────────────────
-// GET  /api/v1/intake/:projectId              → get full bundle (resume)
-router.get('/:projectId', intakeController.getIntakeBundle);
+// GET questions (global, but scoped to intake router for convenience)
+router.get('/questions', async (req, res, next) => {
+  try {
+    const questions = await is.getQuestionsService(req.query.category as string);
+    res.json({ success: true, data: questions });
+  } catch (e) { next(e); }
+});
 
-// POST /api/v1/intake/:projectId/form         → submit close-ended structured form
-router.post('/:projectId/form', intakeController.submitIntakeForm);
+// GET intake bundle (prefill forms on resume)
+router.get('/', async (req, res, next) => {
+  try {
+    const { projectId } = req.params as any;
+    const bundle = await is.getIntakeBundleService(uid(req), projectId);
+    res.json({ success: true, data: { bundle } });
+  } catch (e) { next(e); }
+});
 
-// PATCH /api/v1/intake/:projectId/screen/:screenNumber → save individual guided screen
-router.patch('/:projectId/screen/:screenNumber', intakeController.saveScreen);
+// POST save structured form data
+router.post('/form', async (req, res, next) => {
+  try {
+    const { projectId } = req.params as any;
+    const bundle = await is.saveStructuredFormService(
+      uid(req), projectId, req.body.formData
+    );
+    res.json({ success: true, data: { bundle } });
+  } catch (e) { next(e); }
+});
 
-// POST /api/v1/intake/:projectId/assemble     → assemble final IntakeBundle JSON
-router.post('/:projectId/assemble', intakeController.assembleBundle);
+// PATCH save guided screen (screen 1-4)
+router.patch('/screen/:screenNumber', async (req, res, next) => {
+  try {
+    const { projectId, screenNumber: sNum } = req.params as any;
+    const screenNumber = parseInt(sNum) as 1|2|3|4;
+    if (![1, 2, 3, 4].includes(screenNumber)) {
+      return res.status(400).json({
+        success: false, code: 'INVALID_SCREEN',
+        message: 'Screen number must be 1, 2, 3, or 4.'
+      });
+    }
+    const { content, detectedItems = [], confirmedItems = [] } = req.body;
+    const bundle = await is.saveGuidedScreenService(
+      uid(req), projectId, screenNumber,
+      content, detectedItems, confirmedItems
+    );
+    res.json({ success: true, data: { bundle } });
+  } catch (e) { next(e); }
+});
+
+// PATCH auto-save (no progress advance)
+router.patch('/screen/:screenNumber/autosave', async (req, res, next) => {
+  try {
+    const { projectId, screenNumber: sNum } = req.params as any;
+    const screenNumber = parseInt(sNum) as 1|2|3|4;
+    await is.autoSaveGuidedScreenService(
+      uid(req), projectId, screenNumber, req.body.content
+    );
+    res.json({ success: true, message: 'Auto-saved.' });
+  } catch (e) { next(e); }
+});
 
 export default router;

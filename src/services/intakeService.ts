@@ -1,111 +1,46 @@
 import axiosInstance from '../lib/axios';
+import type { ApiResponse } from '../types/api.types';
+import type { IntakeBundle } from '../types/intake.types';
 
-export interface Question {
-  id: string;
-  section: string;
-  question: string;
-  type: string;
-  placeholder?: string;
-  required?: boolean;
-  options?: string[];
-  yesLabel?: string;
-  noLabel?: string;
-  order?: number;
-}
+const intakeService = {
+  // Load existing intake data to prefill forms
+  getIntakeBundle: (projectId: string) =>
+    axiosInstance.get<ApiResponse<{ bundle: IntakeBundle }>>(
+      `/projects/${projectId}/intake`
+    ),
 
-export interface IntakeBundleResponse {
-  exists?: boolean;
-  projectId?: string;
-  structuredForm?: Record<string, unknown>;
-  screen1WorkflowStory?: string;
-  screen2PeopleRoles?: string;
-  screen3DataTracking?: string;
-  screen4RulesExceptions?: string;
-  completedScreens?: number[];
-  bundleJson?: {
-    metadata: {
-      totalWordCount: number;
-      completedScreens: number[];
-      hasDocuments: boolean;
-    };
-    [key: string]: any;
-  } | null;
-  bundleVersion?: number;
-  validationErrors?: string[];
-  isValidated?: boolean;
-  status?: string;
-}
+  // Save structured form (close-ended step)
+  saveStructuredForm: (projectId: string, formData: Record<string, any>) =>
+    axiosInstance.post<ApiResponse<{ bundle: IntakeBundle }>>(
+      `/projects/${projectId}/intake/form`,
+      { formData }
+    ),
 
-export interface ScreenSaveResponse {
-  screenNumber: number;
-  saved: boolean;
-  characterCount: number;
-  completedScreens: number[];
-}
+  // Save guided screen — called BEFORE navigating to next screen
+  saveGuidedScreen: (
+    projectId: string,
+    screenNumber: 1 | 2 | 3 | 4,
+    data: {
+      content: string;
+      detectedItems: string[];
+      confirmedItems: string[];
+    }
+  ) =>
+    axiosInstance.patch<ApiResponse<{ bundle: IntakeBundle }>>(
+      `/projects/${projectId}/intake/screen/${screenNumber}`,
+      data
+    ),
 
-export interface AssembleResponse {
-  bundle: Record<string, unknown>;
-  bundleVersion: number;
-  validationErrors: string[];
-  isValidated: boolean;
-}
+  // Auto-save without advancing progress
+  autoSaveScreen: (projectId: string, screenNumber: 1|2|3|4, content: string) =>
+    axiosInstance.patch(
+      `/projects/${projectId}/intake/screen/${screenNumber}/autosave`,
+      { content }
+    ),
 
-// ── GET questions by category ─────────────────────────────────────────────────
-const getQuestions = async (category: 'clinic' | 'school'): Promise<Question[]> => {
-  const response = await axiosInstance.get(`/intake/questions?category=${category}`);
-  return response.data.data;
+  // Get domain-specific questions
+  getQuestions: (category: 'clinic' | 'school') =>
+    axiosInstance.get(`/intake/questions?category=${category}`).then(res => res.data.data),
 };
 
-// ── POST /intake/:projectId/form ─────────────────────────────────────────────
-// Submit the close-ended structured form data
-const submitForm = async (
-  projectId: string,
-  formData: Record<string, unknown>
-): Promise<{ saved: boolean; savedAt: string; structuredForm: Record<string, unknown> }> => {
-  const response = await axiosInstance.post(`/intake/${projectId}/form`, formData);
-  return response.data.data;
-};
-
-// ── GET /intake/:projectId ────────────────────────────────────────────────────
-// Retrieve the full intake bundle (used for resuming sessions)
-const getIntake = async (projectId: string): Promise<IntakeBundleResponse> => {
-  const response = await axiosInstance.get(`/intake/${projectId}`);
-  return response.data.data;
-};
-
-// ── PATCH /intake/:projectId/screen/:screenNumber ────────────────────────────
-// Save text for one guided screen
-const saveScreen = async (
-  projectId: string,
-  screenNumber: 1 | 2 | 3 | 4,
-  text: string
-): Promise<ScreenSaveResponse> => {
-  const response = await axiosInstance.patch(
-    `/intake/${projectId}/screen/${screenNumber}`,
-    { text }
-  );
-  return response.data.data;
-};
-
-// ── POST /intake/:projectId/assemble ─────────────────────────────────────────
-// Trigger bundle assembly and validation
-const assembleBundle = async (projectId: string): Promise<AssembleResponse> => {
-  const response = await axiosInstance.post(`/intake/${projectId}/assemble`);
-  return response.data.data;
-};
-
-// Legacy alias kept for backward-compat with existing CloseEndedForm component
-// (it used saveIntakeForm → PATCH /intake/:projectId/form, now mapped to submitForm via POST)
-const saveIntakeForm = async (projectId: string, data: Record<string, unknown>) => {
-  return submitForm(projectId, data);
-};
-
-export default {
-  getQuestions,
-  submitForm,
-  getIntake,
-  saveScreen,
-  assembleBundle,
-  // legacy alias
-  saveIntakeForm,
-};
+export default intakeService;

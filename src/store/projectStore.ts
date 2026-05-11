@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { mockProjects } from '../constants/mockData';
 
 export type ProjectStatus = 'INTAKE' | 'SPEC_READY' | 'PREVIEW' | 'LIVE';
 
@@ -16,13 +15,13 @@ interface ProjectStore {
   projects: Project[];
   activeProject: Project | null;
   setProjects: (projects: Project[]) => void;
-  setActiveProject: (project: Project) => void;
+  setActiveProject: (project: Project | null) => void;
   addProject: (project: Project) => void;
   updateProjectStatus: (id: string, status: ProjectStatus) => void;
 }
 
 export const useProjectStore = create<ProjectStore>((set) => ({
-  projects: mockProjects as Project[],
+  projects: [],
   activeProject: null,
   setProjects: (projects) => set({ projects }),
   setActiveProject: (project) => set({ activeProject: project }),

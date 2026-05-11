@@ -117,7 +117,7 @@ export const CreateProjectModal = ({ isOpen, onClose }: Props) => {
                 if (nameError) setNameError('');
               }}
               onKeyDown={(e) => e.key === 'Enter' && domain && handleSubmit()}
-              placeholder="e.g. Al-Shifa Clinic App"
+              placeholder="e.g. My New Workflow"
               className={`w-full h-11 px-4 rounded-xl border text-sm text-slate-800
                          placeholder:text-slate-400 outline-none transition-all
                          ${nameError
