@@ -26,14 +26,8 @@ export const createApp = (): Application => {
 
   app.use(cors({
     origin: (origin, callback) => {
-      // Allow: 1. No origin (direct access), 2. Same origin, 3. Explicitly allowed origins
-      if (!origin || allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-      
-      // For development/debugging
-      console.warn(`CORS blocked origin: ${origin}`);
-      return callback(null, true); // Loosen for now to fix production blocker
+      // Ultra-loose for production stabilization
+      return callback(null, true);
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
