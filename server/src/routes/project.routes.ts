@@ -23,7 +23,7 @@ router.get('/archived', async (req: Request, res: Response, next: NextFunction) 
 
 router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const project = await ps.getProjectService((req as any).userId, req.params.id);
+    const project = await ps.getProjectService((req as any).userId, req.params.id as string);
     res.json({ success: true, data: { project } });
   } catch (err) { next(err); }
 });
@@ -45,7 +45,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
 router.patch('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const project = await ps.updateProjectService(
-      (req as any).userId, req.params.id, req.body
+      (req as any).userId, req.params.id as string, req.body
     );
     res.json({ success: true, data: { project } });
   } catch (err) { next(err); }
@@ -53,7 +53,7 @@ router.patch('/:id', async (req: Request, res: Response, next: NextFunction) => 
 
 router.delete('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    await ps.deleteProjectService((req as any).userId, req.params.id);
+    await ps.deleteProjectService((req as any).userId, req.params.id as string);
     res.json({ success: true, message: 'Project deleted.' });
   } catch (err) { next(err); }
 });
@@ -61,7 +61,7 @@ router.delete('/:id', async (req: Request, res: Response, next: NextFunction) =>
 router.post('/:id/duplicate', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const project = await ps.duplicateProjectService(
-      (req as any).userId, req.params.id
+      (req as any).userId, req.params.id as string
     );
     res.status(201).json({ success: true, data: { project } });
   } catch (err) { next(err); }
@@ -70,7 +70,7 @@ router.post('/:id/duplicate', async (req: Request, res: Response, next: NextFunc
 router.patch('/:id/archive', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const project = await ps.archiveProjectService(
-      (req as any).userId, req.params.id
+      (req as any).userId, req.params.id as string
     );
     res.json({ success: true, data: { project } });
   } catch (err) { next(err); }
@@ -79,7 +79,7 @@ router.patch('/:id/archive', async (req: Request, res: Response, next: NextFunct
 router.patch('/:id/restore', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const project = await ps.updateProjectService(
-      (req as any).userId, req.params.id, { isArchived: false } as any
+      (req as any).userId, req.params.id as string, { isArchived: false } as any
     );
     res.json({ success: true, data: { project } });
   } catch (err) { next(err); }

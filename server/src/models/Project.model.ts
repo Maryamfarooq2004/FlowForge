@@ -45,7 +45,7 @@ const projectSchema = new Schema<IProject>(
     timestamps: true,
     toJSON: {
       virtuals: true,
-      transform: (_doc, ret) => {
+      transform: (_doc, ret: any) => {
         ret.id = ret._id.toString();
         delete ret.__v;
         return ret;

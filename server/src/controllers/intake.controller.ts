@@ -48,7 +48,7 @@ export const getQuestions = async (
       return;
     }
 
-    const questions = await IntakeQuestion.find({ category }).sort({ order: 1 });
+    const questions = await IntakeQuestion.find({ category: category as string }).sort({ order: 1 });
     sendSuccess(res, questions, 'Questions retrieved successfully');
   } catch (error) {
     next(error);
@@ -69,7 +69,7 @@ export const submitIntakeForm = async (
     const userId = (req as any).userId as string;
 
     // 1. Verify project ownership
-    const project = await Project.findOne({ _id: projectId, userId });
+    const project = await Project.findOne({ _id: projectId as string, userId });
     if (!project) {
       sendError(res, 'Project not found or access denied', 404);
       return;
@@ -125,10 +125,10 @@ export const submitIntakeForm = async (
 
     // 3. Upsert IntakeBundle
     const bundle = await IntakeBundle.findOneAndUpdate(
-      { projectId },
+      { projectId: projectId as string },
       {
         $set: {
-          projectId: new mongoose.Types.ObjectId(projectId),
+          projectId: new mongoose.Types.ObjectId(projectId as string),
           userId: new mongoose.Types.ObjectId(userId),
           structuredForm,
           status: 'form_complete',
@@ -139,7 +139,7 @@ export const submitIntakeForm = async (
 
     // 4. Update project status to 'INTAKE' if not already progressed
     if (project.status === 'INTAKE') {
-      await Project.findByIdAndUpdate(projectId, { status: 'INTAKE' });
+      await Project.findByIdAndUpdate(projectId as string, { status: 'INTAKE' });
     }
 
     sendSuccess(
@@ -172,13 +172,13 @@ export const getIntakeBundle = async (
     const userId = (req as any).userId as string;
 
     // Verify ownership via project
-    const project = await Project.findOne({ _id: projectId, userId });
+    const project = await Project.findOne({ _id: projectId as string, userId });
     if (!project) {
       sendError(res, 'Project not found or access denied', 404);
       return;
     }
 
-    const bundle = await IntakeBundle.findOne({ projectId });
+    const bundle = await IntakeBundle.findOne({ projectId: projectId as string });
     if (!bundle) {
       // Return empty bundle shape so front-end can start fresh
       sendSuccess(res, { exists: false, projectId }, 'No intake bundle found yet');
@@ -204,14 +204,14 @@ export const saveScreen = async (
     const { projectId, screenNumber } = req.params;
     const userId = (req as any).userId as string;
 
-    const screenNum = parseInt(screenNumber, 10);
+    const screenNum = parseInt(screenNumber as string, 10);
     if (![1, 2, 3, 4].includes(screenNum)) {
       sendError(res, 'screenNumber must be 1, 2, 3, or 4', 400);
       return;
     }
 
     // Verify project ownership
-    const project = await Project.findOne({ _id: projectId, userId });
+    const project = await Project.findOne({ _id: projectId as string, userId });
     if (!project) {
       sendError(res, 'Project not found or access denied', 404);
       return;
@@ -241,10 +241,10 @@ export const saveScreen = async (
 
     // Upsert — create bundle if it doesn't exist yet
     const bundle = await IntakeBundle.findOneAndUpdate(
-      { projectId },
+      { projectId: projectId as string },
       {
         $set: {
-          projectId: new mongoose.Types.ObjectId(projectId),
+          projectId: new mongoose.Types.ObjectId(projectId as string),
           userId: new mongoose.Types.ObjectId(userId),
           [fieldName]: sanitized,
         },
@@ -287,13 +287,13 @@ export const assembleBundle = async (
     const userId = (req as any).userId as string;
 
     // Verify project ownership
-    const project = await Project.findOne({ _id: projectId, userId });
+    const project = await Project.findOne({ _id: projectId as string, userId });
     if (!project) {
       sendError(res, 'Project not found or access denied', 404);
       return;
     }
 
-    const bundle = await IntakeBundle.findOne({ projectId });
+    const bundle = await IntakeBundle.findOne({ projectId: projectId as string });
 
     // BUG 2 FIX — server enforces minimums regardless of UI
     if (!bundle) {
