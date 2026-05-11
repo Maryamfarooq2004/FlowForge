@@ -14,7 +14,7 @@ import {
 import { cn } from '../../utils/classNames';
 
 const MOCK_DEPLOYMENTS = [
-  { id: 'dep_001', project: 'Al-Shifa Clinic', url: 'alshifa.flowforge.app', status: 'LIVE', runtime: 'Node 22.x', region: 'us-east-1', lastDeploy: '2 hours ago' },
+  { id: 'dep_001', project: 'My Organization', url: 'alshifa.flowforge.app', status: 'LIVE', runtime: 'Node 22.x', region: 'us-east-1', lastDeploy: '2 hours ago' },
   { id: 'dep_002', project: 'Heritage School', url: 'heritage.flowforge.app', status: 'LIVE', runtime: 'Node 22.x', region: 'us-east-1', lastDeploy: '5 hours ago' },
   { id: 'dep_003', project: 'City Hospital', url: 'cityhosp.flowforge.app', status: 'BUILDING', runtime: 'Node 22.x', region: 'eu-west-1', lastDeploy: 'Just now' },
   { id: 'dep_004', project: 'Dental Plus', url: 'dentalplus.flowforge.app', status: 'LIVE', runtime: 'Node 22.x', region: 'us-east-1', lastDeploy: '1 day ago' },

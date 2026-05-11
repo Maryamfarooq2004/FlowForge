@@ -16,11 +16,11 @@ import { Avatar } from '../../components/ui/Avatar';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const MOCK_USERS = [
-  { id: 'u1', name: 'Dr. Sara Ahmed', email: 'sara@alshifaclinic.com', orgType: 'Clinic', joined: '15 Jan 2026', projects: 3, status: 'ACTIVE' },
-  { id: 'u2', name: 'Alex Rivera', email: 'alex@riverside.edu', orgType: 'School', joined: '20 Jan 2026', projects: 1, status: 'ACTIVE' },
-  { id: 'u3', name: 'James Wilson', email: 'james@cityclinic.pk', orgType: 'Clinic', joined: '02 Feb 2026', projects: 0, status: 'ACTIVE' },
-  { id: 'u4', name: 'Zoya Khan', email: 'zoya@stmarys.edu', orgType: 'School', joined: '05 Feb 2026', projects: 2, status: 'ACTIVE' },
-  { id: 'u5', name: 'Omar Riaz', email: 'omar@alshifa.com', orgType: 'Clinic', joined: '10 Feb 2026', projects: 0, status: 'SUSPENDED' },
+  { id: 'u1', name: 'Maryam Farooq', email: 'maryam@flowforge.app', orgType: 'Clinic', joined: '15 Jan 2026', projects: 3, status: 'ACTIVE' },
+  { id: 'u2', name: 'Alex Rivera', email: 'alex@company.com', orgType: 'School', joined: '20 Jan 2026', projects: 1, status: 'ACTIVE' },
+  { id: 'u3', name: 'James Wilson', email: 'james@company.com', orgType: 'Clinic', joined: '02 Feb 2026', projects: 0, status: 'ACTIVE' },
+  { id: 'u4', name: 'Zoya Khan', email: 'zoya@company.com', orgType: 'School', joined: '05 Feb 2026', projects: 2, status: 'ACTIVE' },
+  { id: 'u5', name: 'Omar Riaz', email: 'omar@company.com', orgType: 'Clinic', joined: '10 Feb 2026', projects: 0, status: 'SUSPENDED' },
 ];
 
 const AdminUsersPage: React.FC = () => {

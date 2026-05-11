@@ -168,7 +168,7 @@ const DocumentExtractionPage: React.FC = () => {
                       </thead>
                       <tbody className="text-slate-700 divide-y divide-slate-50">
                         <tr>
-                          <td className="px-6 py-3">Sarah J. Miller</td>
+                          <td className="px-6 py-3">Maryam Farooq</td>
                           <td className="px-6 py-3">+1 555-0123</td>
                           <td className="px-6 py-3">2023-11-24</td>
                           <td className="px-6 py-3">Hypertension</td>
@@ -198,7 +198,7 @@ const DocumentExtractionPage: React.FC = () => {
                     <tbody className="divide-y divide-slate-50">
                       <tr>
                         <td className="py-4 font-semibold text-slate-800">Patient Name</td>
-                        <td className="py-4 text-slate-600">Sarah J. Miller</td>
+                        <td className="py-4 text-slate-600">Maryam Farooq</td>
                         <td className="py-4">
                           <div className="flex items-center space-x-2">
                             <div className="w-24 h-2 bg-slate-100 rounded-full overflow-hidden">

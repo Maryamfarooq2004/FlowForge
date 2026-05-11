@@ -190,7 +190,7 @@ const SupportPage: React.FC = () => {
                   </div>
                   <h3 className="text-lg font-bold text-slate-800 font-poppins mb-2">Message sent!</h3>
                   <p className="text-slate-500 text-sm">
-                    We'll respond to <span className="font-semibold text-slate-700">sara@alshifaclinic.com</span> within 24 hours.
+                    We'll respond to <span className="font-semibold text-slate-700">user@company.com</span> within 24 hours.
                   </p>
                 </motion.div>
               ) : (

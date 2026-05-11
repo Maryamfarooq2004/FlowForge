@@ -31,7 +31,7 @@ const DeploymentHubPage: React.FC = () => {
           <Logo size="sm" variant="light" useSecondary={true} />
           <div className="h-4 w-[1px] bg-white/20" />
           <div className="flex items-center space-x-2 text-xs font-medium">
-            <span className="text-white/50">Al-Shifa Clinic</span>
+            <span className="text-white/50">My Organization</span>
             <span className="text-white/30">&gt;</span>
             <span className="text-white">Deploy & Export</span>
           </div>
@@ -53,7 +53,7 @@ const DeploymentHubPage: React.FC = () => {
           
           <div className="mb-10">
             <h1 className="text-[32px] font-bold text-slate-900 font-poppins mb-2">Your App is Ready to Go Live</h1>
-            <p className="text-slate-500 text-sm">Al-Shifa Clinic — Last generated: Today 11:42 AM</p>
+            <p className="text-slate-500 text-sm">My Organization — Last generated: Today 11:42 AM</p>
           </div>
 
           {/* Top Two Columns */}

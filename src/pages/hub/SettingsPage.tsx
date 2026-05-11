@@ -57,7 +57,7 @@ const SettingsPage: React.FC = () => {
                 <div className="flex-1">
                   <h3 className="font-semibold text-amber-800 text-sm">Email change pending verification</h3>
                   <p className="text-sm text-amber-700 leading-snug mt-0.5">
-                    We sent a link to <span className="font-semibold">new@email.com</span> — click it to confirm. Your current email <span className="font-semibold">sara@alshifaclinic.com</span> remains active until then.
+                    We sent a link to <span className="font-semibold">{user?.email}</span> — click it to confirm. Your current email remains active until then.
                   </p>
                 </div>
                 <div className="flex items-center space-x-2 shrink-0 self-end sm:self-auto">
@@ -82,19 +82,19 @@ const SettingsPage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
               <Input 
                 label="FULL NAME" 
-                defaultValue="Dr. Sara Ahmed" 
+                defaultValue={user?.fullName || ''} 
                 className="font-inter"
               />
               <Input 
                 label="BUSINESS NAME" 
-                defaultValue="Al-Shifa Clinic" 
+                defaultValue={user?.businessName || user?.orgType || ''} 
                 className="font-inter"
               />
               <div className="md:col-span-2 relative space-y-4">
                 <div className="relative">
                   <Input 
                     label={isEmailPending ? "CURRENT EMAIL" : "EMAIL ADDRESS"}
-                    defaultValue="sara@alshifaclinic.com" 
+                    defaultValue={user?.email || ''} 
                     readOnly={isEmailPending}
                     className={cn("font-inter pr-24", isEmailPending && "bg-slate-50 text-slate-500 border-slate-200")}
                   />
@@ -205,7 +205,7 @@ const SettingsPage: React.FC = () => {
                   <Plus size={24} />
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-slate-800">Al-Shifa Clinic</p>
+                  <p className="text-sm font-bold text-slate-800">{user?.businessName || 'My Organization'}</p>
                   <p className="text-[10px] text-slate-400 font-medium uppercase tracking-tight">Default Clinic Cross Logo</p>
                 </div>
               </div>

@@ -119,7 +119,7 @@ const TerminalWindow = () => {
     { text: '> Generating PostgreSQL schema...', status: 'done', time: '1.1s' },
     { text: '> Building React frontend...', status: 'done', time: '2.3s' },
     { text: '> Deploying to production...', status: 'done', time: '0.4s' },
-    { text: '✦ Live at: al-shifa-clinic.flowforge.app', status: 'success', time: '' },
+    { text: '✦ Live at: my-organization.flowforge.app', status: 'success', time: '' },
   ];
 
   useEffect(() => {
@@ -650,7 +650,7 @@ const LandingPage: React.FC = () => {
       <section className="py-28 px-4 sm:px-6 bg-white">
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-wrap items-center justify-center gap-6 mb-24">
-            {['Al-Shifa Medical', 'Beacon Institute', 'MediCare Clinic', 'Bright Minds Academy'].map(client => (
+            {['Islamabad Medical', 'Beacon Institute', 'City Care Clinic', 'Bright Minds Academy'].map(client => (
               <div key={client} className="px-6 py-3 border border-slate-200 rounded-md">
                 <span className="text-[13px] font-bold text-slate-400 tracking-tight 
                                  hover:text-slate-700 transition-colors cursor-default">
@@ -664,11 +664,11 @@ const LandingPage: React.FC = () => {
             <Quote size={60} className="absolute -top-8 -left-4 text-slate-100 pointer-events-none" />
             <div className="relative z-10 text-center">
               <p className="text-2xl font-medium text-slate-800 font-poppins leading-relaxed mb-10 tracking-tight">
-                "FlowForge bridged the gap between our clinic's manual registers and a modern digital experience in days."
+                "FlowForge bridged the gap between our organization's manual registers and a modern digital experience in days."
               </p>
               <div className="flex flex-col items-center">
-                <p className="font-bold text-slate-900 tracking-tight">Dr. Asma Khan</p>
-                <p className="text-[11px] text-[#0F766E] font-semibold uppercase tracking-[0.2em] mt-2">Director, Al-Shifa Islamabad</p>
+                <p className="font-bold text-slate-900 tracking-tight">Maryam Farooq</p>
+                <p className="text-[11px] text-[#0F766E] font-semibold uppercase tracking-[0.2em] mt-2">Director, FlowForge Project</p>
               </div>
             </div>
           </FadeIn>

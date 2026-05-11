@@ -51,7 +51,7 @@ const BlueprintReviewPage: React.FC = () => {
         </div>
 
         <div className="flex items-center justify-center flex-1">
-          <span className="text-white/80 text-sm font-medium">Al-Shifa Clinic — App Blueprint Draft</span>
+          <span className="text-white/80 text-sm font-medium">My Organization — App Blueprint Draft</span>
         </div>
 
         <div className="flex items-center space-x-4">

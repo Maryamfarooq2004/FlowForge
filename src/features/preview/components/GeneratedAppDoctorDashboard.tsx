@@ -20,7 +20,7 @@ const KpiCard: React.FC<{
 );
 
 const APPOINTMENTS = [
-  { time: '09:30 AM', patient: 'Ahmed Khan', reason: 'General Checkup', status: 'SCHEDULED' },
+  { time: '09:30 AM', patient: 'User Name', reason: 'General Checkup', status: 'SCHEDULED' },
   { time: '10:15 AM', patient: 'Fatima Malik', reason: 'Follow-up', status: 'CONFIRMED' },
   { time: '11:00 AM', patient: 'Zara Hussain', reason: 'Blood Pressure Review', status: 'CONFIRMED' },
   { time: '12:30 PM', patient: '—', reason: 'Lunch Break', status: 'BLOCKED' },
@@ -39,7 +39,7 @@ export const GeneratedAppDoctorDashboard: React.FC = () => (
     {/* Header */}
     <div>
       <h1 className="text-xl font-bold text-slate-900 font-poppins">Good morning, Dr. Ahmad</h1>
-      <p className="text-sm text-slate-500">Al-Shifa Clinic — Medical Dashboard</p>
+      <p className="text-sm text-slate-500">My Organization — Medical Dashboard</p>
     </div>
 
     {/* KPIs */}
@@ -147,7 +147,7 @@ export const GeneratedAppDoctorDashboard: React.FC = () => (
           </div>
         </div>
         <div className="bg-slate-50 rounded-xl p-3.5 border-l-2 border-[#0F766E]">
-          <p className="text-xs font-semibold text-slate-800 mb-1">Ahmed Khan</p>
+          <p className="text-xs font-semibold text-slate-800 mb-1">User Name</p>
           <p className="text-xs text-slate-500 leading-relaxed">Routine check, all vitals normal — scheduled 6-month follow-up</p>
           <p className="text-[10px] text-slate-400 mt-2">Yesterday 03:30 PM</p>
         </div>

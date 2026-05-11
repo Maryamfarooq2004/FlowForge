@@ -12,7 +12,7 @@ interface GeneratedAppLoginProps {
 }
 
 export const GeneratedAppLogin: React.FC<GeneratedAppLoginProps> = ({ 
-  appName = "Al-Shifa Clinic", 
+  appName = "My Organization", 
   appTheme = 'teal',
   roles = ['Receptionist', 'Doctor', 'Manager']
 }) => {

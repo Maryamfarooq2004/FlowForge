@@ -108,7 +108,7 @@ const GenerationProgressPage: React.FC = () => {
           <div className="h-4 w-[1px] bg-white/20" />
           <div className="flex items-center space-x-2 text-xs font-medium">
             <span className="text-white">Generating Your App</span>
-            <span className="text-white/50">Al-Shifa Clinic</span>
+            <span className="text-white/50">My Organization</span>
             <span className="text-white/50">›</span>
           </div>
         </div>

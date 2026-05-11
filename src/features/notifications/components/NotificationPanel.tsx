@@ -17,7 +17,7 @@ const MOCK_NOTIFICATIONS: Notification[] = [
   {
     id: '1',
     type: 'generation',
-    title: 'Al-Shifa Clinic — Generation complete',
+    title: 'My Organization — Generation complete',
     body: 'Your application is ready to preview. Code generation completed in 6m 42s.',
     timestamp: '2 hours ago',
     isRead: false,
@@ -41,8 +41,8 @@ const MOCK_NOTIFICATIONS: Notification[] = [
   {
     id: '4',
     type: 'email',
-    title: 'Email verification resent to sara@...',
-    body: 'A new verification link was sent to sara@alshifaclinic.com.',
+    title: 'Email verification resent to user@...',
+    body: 'A new verification link was sent to user@company.com.',
     timestamp: '2 days ago',
     isRead: true,
   },

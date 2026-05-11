@@ -116,7 +116,7 @@ export const GeneratedAppNewPatientForm: React.FC<GeneratedAppNewPatientFormProp
           <Field label="Doctor">
             <select className={selectCls}>
               <option>Dr. Ahmad — General</option>
-              <option>Dr. Sara — Specialist</option>
+              <option>Maryam — Specialist</option>
             </select>
           </Field>
           <Field label="Notes" span>

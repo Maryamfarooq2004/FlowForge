@@ -41,7 +41,7 @@ const InfrastructurePage: React.FC = () => {
           <Logo size="sm" variant="light" useSecondary={true} />
           <div className="h-4 w-[1px] bg-white/20" />
           <div className="flex items-center space-x-2 text-xs font-medium">
-            <span className="text-white/50">Al-Shifa Clinic</span>
+            <span className="text-white/50">My Organization</span>
             <span className="text-white/30">›</span>
             <span className="text-white">Infrastructure</span>
           </div>

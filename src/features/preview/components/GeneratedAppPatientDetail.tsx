@@ -30,14 +30,14 @@ export const GeneratedAppPatientDetail: React.FC<GeneratedAppPatientDetailProps>
       {/* Breadcrumb */}
       <button onClick={onBack} className="flex items-center gap-1.5 text-xs text-[#0F766E] font-semibold hover:underline">
         <ChevronLeft size={14} />
-        Patients &rsaquo; Ahmed Khan
+        Patients &rsaquo; User Name
       </button>
 
       {/* Patient Profile Card */}
       <div className="bg-white rounded-xl border border-slate-200 p-5 flex items-start gap-5 shadow-sm">
         <div className="w-16 h-16 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center text-xl font-bold shrink-0">AK</div>
         <div className="flex-1 min-w-0">
-          <h1 className="text-lg font-bold text-slate-900 font-poppins">Ahmed Khan</h1>
+          <h1 className="text-lg font-bold text-slate-900 font-poppins">User Name</h1>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 mt-1">
             <span>Male</span>
             <span className="text-slate-300">·</span>
@@ -49,7 +49,7 @@ export const GeneratedAppPatientDetail: React.FC<GeneratedAppPatientDetailProps>
           </div>
           <div className="flex items-center gap-4 mt-2 text-xs text-slate-500">
             <span className="flex items-center gap-1"><Phone size={11} /> +92 300 1234567</span>
-            <span className="flex items-center gap-1"><Mail size={11} /> ahmed@email.com</span>
+            <span className="flex items-center gap-1"><Mail size={11} /> user@email.com</span>
           </div>
           <div className="flex gap-2 mt-3">
             <span className="bg-teal-100 text-teal-700 text-[10px] font-bold px-2.5 py-1 rounded-full">Hypertension</span>

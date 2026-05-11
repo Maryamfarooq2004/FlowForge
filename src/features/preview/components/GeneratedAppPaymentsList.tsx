@@ -20,7 +20,7 @@ interface Payment {
 }
 
 const PAYMENTS: Payment[] = [
-  { patient: 'Ahmed Khan', initials: 'AK', date: '8 May 2026', amount: 'PKR 1,500', method: 'Cash', status: 'PAID' },
+  { patient: 'User Name', initials: 'AK', date: '8 May 2026', amount: 'PKR 1,500', method: 'Cash', status: 'PAID' },
   { patient: 'Fatima Malik', initials: 'FM', date: '8 May 2026', amount: 'PKR 3,000', method: 'Credit Card', status: 'PAID' },
   { patient: 'Omar Riaz', initials: 'OR', date: '1 May 2026', amount: 'PKR 2,500', method: null, status: 'PENDING' },
   { patient: 'Zainab Ali', initials: 'ZA', date: '15 Apr 2026', amount: 'PKR 5,900', method: 'Insurance', status: 'PROCESSING' },

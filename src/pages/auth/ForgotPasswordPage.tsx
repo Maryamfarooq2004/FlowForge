@@ -75,7 +75,7 @@ export const ForgotPasswordPage: React.FC = () => {
                 <Input
                   label="BUSINESS EMAIL"
                   type="email"
-                  placeholder="sara@alshifaclinic.com"
+                  placeholder="user@company.com"
                   autoComplete="email"
                   {...register('email')}
                   variant={errors.email ? 'error' : 'default'}

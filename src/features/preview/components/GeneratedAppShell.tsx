@@ -45,8 +45,8 @@ export const GeneratedAppShell: React.FC<GeneratedAppShellProps> = ({
         <div className="p-4 flex items-center space-x-3 border-b border-slate-100">
           <div className="w-8 h-8 rounded-full bg-[#0F766E] text-white flex items-center justify-center font-bold text-lg shrink-0">A</div>
           <div className="overflow-hidden">
-            <h2 className="font-bold text-[#0F766E] text-sm leading-tight truncate">Al-Shifa Clinic</h2>
-            <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Healthcare Mgmt</p>
+            <h2 className="font-bold text-[#0F766E] text-sm leading-tight truncate">My Organization</h2>
+            <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Business Management</p>
           </div>
         </div>
 

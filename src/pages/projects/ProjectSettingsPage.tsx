@@ -109,10 +109,10 @@ const ProjectSettingsPage: React.FC = () => {
     errors: true,
     weekly: false,
   });
-  const projectName = 'Al-Shifa Clinic App';
+  const projectName = 'My Organization App';
 
   return (
-    <AppShell sidebarType="project" projectName="Al-Shifa Clinic" currentSection="Settings">
+    <AppShell sidebarType="project" projectName="My Organization" currentSection="Settings">
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
         <header className="mb-8">
           <h1 className="text-[28px] font-bold text-slate-900 font-poppins mb-1">Project Settings</h1>

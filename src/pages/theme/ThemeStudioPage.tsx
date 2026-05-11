@@ -48,7 +48,7 @@ const ThemeStudioPage: React.FC = () => {
           <Logo size="sm" variant="light" useSecondary={true} />
           <div className="h-4 w-[1px] bg-white/20" />
           <div className="flex items-center space-x-2 text-xs font-medium">
-            <span className="text-white/50">Project: Al-Shifa Clinic</span>
+            <span className="text-white/50">Project: My Organization</span>
             <span className="text-white/30">&gt;</span>
             <span className="text-white">Choose Theme</span>
           </div>
@@ -183,7 +183,7 @@ const ThemeStudioPage: React.FC = () => {
                     <div className="w-6 h-6 bg-teal-900 rounded-md flex items-center justify-center text-white shrink-0">
                       <ImageIcon size={12} />
                     </div>
-                    <span className="text-xs font-semibold text-slate-800 truncate">al-shifa-logo.svg</span>
+                    <span className="text-xs font-semibold text-slate-800 truncate">my-org-logo.svg</span>
                   </div>
                   <p className="text-[10px] text-teal-600/70 font-medium">240 KB • Extraction Active</p>
                 </div>

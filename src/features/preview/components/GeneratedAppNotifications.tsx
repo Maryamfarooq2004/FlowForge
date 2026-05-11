@@ -34,7 +34,7 @@ const NOTIFICATIONS: AppNotification[] = [
   {
     id: '3',
     title: 'New appointment booked',
-    body: 'Ahmed Khan booked a General Checkup for 9 May at 09:30 AM',
+    body: 'User Name booked a General Checkup for 9 May at 09:30 AM',
     time: 'Yesterday, 4:15 PM',
     isRead: true,
     group: 'YESTERDAY',

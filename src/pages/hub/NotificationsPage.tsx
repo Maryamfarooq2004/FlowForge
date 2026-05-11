@@ -15,10 +15,10 @@ interface Notification {
 }
 
 const MOCK_NOTIFICATIONS: Notification[] = [
-  { id: '1', type: 'generation', title: 'Al-Shifa Clinic — Generation complete', body: 'Your application is ready to preview. Code generation completed in 6m 42s.', timestamp: '2 hours ago', isRead: false },
+  { id: '1', type: 'generation', title: 'My Organization — Generation complete', body: 'Your application is ready to preview. Code generation completed in 6m 42s.', timestamp: '2 hours ago', isRead: false },
   { id: '2', type: 'deployment', title: 'LMS Dashboard — Preview deployed', body: 'Your preview environment is live at lms.preview.flowforge.app.', timestamp: '5 hours ago', isRead: false },
   { id: '3', type: 'error', title: 'Patient Portal — LLM extraction timeout', body: 'The extraction failed due to a temporary API timeout. Please retry from the Blueprint Review page.', timestamp: '1 day ago', isRead: true },
-  { id: '4', type: 'email', title: 'Email verification resent to sara@...', body: 'A new verification link was sent to sara@alshifaclinic.com. Valid for 24 hours.', timestamp: '2 days ago', isRead: true },
+  { id: '4', type: 'email', title: 'Email verification resent to user@...', body: 'A new verification link was sent to user@company.com. Valid for 24 hours.', timestamp: '2 days ago', isRead: true },
   { id: '5', type: 'system', title: 'FlowForge platform update v2.4', body: 'New features: Blueprint Review Studio improvements and faster generation pipeline.', timestamp: '3 days ago', isRead: true },
 ];
 

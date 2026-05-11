@@ -78,8 +78,8 @@ const AppPreviewPage: React.FC = () => {
   }, [chatMessages, isGenerating]);
 
   const urlPath = previewMode === 'login'
-    ? 'al-shifa.preview.flowforge.app/login'
-    : `al-shifa.preview.flowforge.app/${appScreen.replace('dashboard-', '').replace('-', '/')}`;
+    ? 'my-org.preview.flowforge.app/login'
+    : `my-org.preview.flowforge.app/${appScreen.replace('dashboard-', '').replace('-', '/')}`;
 
   return (
     <div className="h-screen bg-slate-50 flex flex-col overflow-hidden font-inter">
@@ -89,7 +89,7 @@ const AppPreviewPage: React.FC = () => {
           <Logo size="sm" variant="light" useSecondary={true} />
           <div className="h-4 w-[1px] bg-white/20" />
           <div className="flex items-center space-x-2 text-xs font-medium">
-            <span className="text-white/50">Al-Shifa Clinic</span>
+            <span className="text-white/50">{project?.name || 'My Project'}</span>
             <span className="text-white/30">&gt;</span>
             <span className="text-white">Preview App</span>
           </div>
@@ -184,7 +184,7 @@ const AppPreviewPage: React.FC = () => {
                   setTimeout(() => setPreviewMode('app'), 100);
                 }}
               />
-              <span className="text-[10px] text-slate-400 font-medium hidden sm:block">Sample output — Al-Shifa Clinic App</span>
+              <span className="text-[10px] text-slate-400 font-medium hidden sm:block">Sample output — {project?.name || 'My Project'}</span>
             </div>
           </div>
 
@@ -192,7 +192,7 @@ const AppPreviewPage: React.FC = () => {
           <div className="flex-1 bg-white border border-slate-300 border-t-0 shadow-xl overflow-hidden flex flex-col relative rounded-b-xl">
             {previewMode === 'login' ? (
               <GeneratedAppLogin
-                appName="Al-Shifa Clinic"
+                appName={project?.name || 'My App'}
                 appTheme="teal"
                 roles={['Receptionist', 'Doctor', 'Manager']}
               />
@@ -206,7 +206,7 @@ const AppPreviewPage: React.FC = () => {
                 {appScreen === 'dashboard-receptionist' && (
                   <div className="p-5">
                     <h1 className="text-xl font-bold text-slate-900 font-poppins">Good morning, Receptionist</h1>
-                    <p className="text-sm text-slate-500 mt-1">Welcome to the Al-Shifa Clinical Dashboard.</p>
+                    <p className="text-sm text-slate-500 mt-1">Welcome to the {project?.name || 'App'} Dashboard.</p>
                     <div className="mt-6 grid grid-cols-3 gap-4">
                       {[
                         { label: "Today's Appointments", value: '12' },

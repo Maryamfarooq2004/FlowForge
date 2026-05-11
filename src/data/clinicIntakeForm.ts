@@ -5,7 +5,7 @@ export const CLINIC_INTAKE_QUESTIONS = [
     section: 'Practice Basics',
     question: 'What is the name of your clinic?',
     type: 'text',
-    placeholder: 'e.g., Al-Shifa Medical Center',
+    placeholder: 'e.g., My Org Medical Center',
     required: true,
   },
   {

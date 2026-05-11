@@ -12,10 +12,10 @@ const KpiCard: React.FC<{ icon: React.ReactNode; iconBg: string; value: string; 
 );
 
 const APPOINTMENTS = [
-  { doctor: 'Dr. Ahmad', patient: 'Ahmed Khan', time: '09:30', status: 'VISITED', statusIcon: CheckCircle2, color: 'text-green-600' },
+  { doctor: 'Dr. Ahmad', patient: 'User Name', time: '09:30', status: 'VISITED', statusIcon: CheckCircle2, color: 'text-green-600' },
   { doctor: 'Dr. Ahmad', patient: 'Fatima Malik', time: '10:15', status: 'IN PROGRESS', statusIcon: Zap, color: 'text-blue-600' },
-  { doctor: 'Dr. Sara', patient: 'Zara Hussain', time: '10:00', status: 'CONFIRMED', statusIcon: Clock, color: 'text-teal-600' },
-  { doctor: 'Dr. Sara', patient: 'Omar Riaz', time: '11:30', status: 'SCHEDULED', statusIcon: Clock, color: 'text-slate-400' },
+  { doctor: 'Maryam', patient: 'Zara Hussain', time: '10:00', status: 'CONFIRMED', statusIcon: Clock, color: 'text-teal-600' },
+  { doctor: 'Maryam', patient: 'Omar Riaz', time: '11:30', status: 'SCHEDULED', statusIcon: Clock, color: 'text-slate-400' },
 ];
 
 const REVENUE_BARS = [
@@ -129,7 +129,7 @@ export const GeneratedAppManagerDashboard: React.FC = () => (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-bold text-slate-800">Fee Waiver Request</p>
-            <p className="text-xs text-slate-600 mt-0.5">Ahmed Khan — PKR 2,000 waiver request</p>
+            <p className="text-xs text-slate-600 mt-0.5">User Name — PKR 2,000 waiver request</p>
             <p className="text-[10px] text-slate-400 mt-1">Reason: Financial hardship · Requested by Dr. Ahmad</p>
           </div>
           <div className="flex gap-2 shrink-0">

@@ -14,7 +14,7 @@ interface Patient {
 }
 
 const PATIENTS: Patient[] = [
-  { id: '1', initials: 'AK', name: 'Ahmed Khan', genderAge: 'M / 35', phone: '+92 300 1234567', lastVisit: '8 May 2026', diagnosis: 'Hypertension', status: 'ACTIVE' },
+  { id: '1', initials: 'AK', name: 'User Name', genderAge: 'M / 35', phone: '+92 300 1234567', lastVisit: '8 May 2026', diagnosis: 'Hypertension', status: 'ACTIVE' },
   { id: '2', initials: 'FM', name: 'Fatima Malik', genderAge: 'F / 28', phone: '+92 311 9876543', lastVisit: '5 May 2026', diagnosis: 'Diabetes Type II', status: 'ACTIVE' },
   { id: '3', initials: 'OR', name: 'Omar Riaz', genderAge: 'M / 45', phone: '+92 321 5555555', lastVisit: '1 Apr 2026', diagnosis: 'Follow-up Due ⚠️', status: 'FOLLOW-UP' },
   { id: '4', initials: 'ZA', name: 'Zainab Ali', genderAge: 'F / 22', phone: '+92 333 7777777', lastVisit: '12 Mar 2026', diagnosis: 'Routine Check', status: 'INACTIVE' },

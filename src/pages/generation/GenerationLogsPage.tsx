@@ -115,7 +115,7 @@ const GenerationLogsPage: React.FC = () => {
           <Logo size="sm" variant="light" useSecondary={true} />
           <div className="h-4 w-[1px] bg-white/20" />
           <div className="flex items-center space-x-2 text-xs font-medium">
-            <span className="text-white/50">Al-Shifa Clinic</span>
+            <span className="text-white/50">My Organization</span>
             <span className="text-white/30">›</span>
             <span className="text-white">Build Logs</span>
           </div>
@@ -167,7 +167,7 @@ const GenerationLogsPage: React.FC = () => {
             {/* Header */}
             <div className="flex items-start justify-between mb-6">
               <div>
-                <h1 className="text-2xl font-bold text-slate-900 font-poppins">Build Logs — Al-Shifa Clinic</h1>
+                <h1 className="text-2xl font-bold text-slate-900 font-poppins">Build Logs — My Organization</h1>
                 <div className="flex items-center gap-3 mt-2">
                   <span className="flex items-center gap-1.5 bg-green-100 text-green-700 text-xs font-bold px-2.5 py-1 rounded-full">
                     <CheckCircle2 size={12} />COMPLETED

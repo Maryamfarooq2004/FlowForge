@@ -91,7 +91,7 @@ const WorkflowsOverviewPage: React.FC = () => {
           <Logo size="sm" variant="light" useSecondary={true} />
           <div className="h-4 w-[1px] bg-white/20" />
           <div className="flex items-center space-x-2 text-xs font-medium">
-            <span className="text-white/50">Al-Shifa Clinic</span>
+            <span className="text-white/50">My Organization</span>
             <span className="text-white/30">›</span>
             <span className="text-white">Workflows</span>
           </div>
@@ -131,7 +131,7 @@ const WorkflowsOverviewPage: React.FC = () => {
           {/* Header */}
           <div className="mb-8">
             <h1 className="text-2xl font-bold text-slate-900 font-poppins">Workflow States & Transitions</h1>
-            <p className="text-slate-500 mt-1 text-sm">These are the workflow stages built into your Al-Shifa Clinic application.</p>
+            <p className="text-slate-500 mt-1 text-sm">These are the workflow stages built into your My Organization application.</p>
           </div>
 
           {/* Visual Workflow Map */}
