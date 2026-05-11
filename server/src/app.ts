@@ -1,6 +1,5 @@
 import express, { Application, Request, Response, NextFunction } from 'express';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import cors from 'cors';
 import helmet from 'helmet';
 import mongoSanitize from 'express-mongo-sanitize';
@@ -12,9 +11,6 @@ import adminRoutes from './routes/admin.routes';
 import intakeRoutes from './routes/intake.routes';
 import projectRoutes from './routes/project.routes';
 import aiRoutes from './routes/ai.routes';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 export const createApp = (): Application => {
   const app = express();
