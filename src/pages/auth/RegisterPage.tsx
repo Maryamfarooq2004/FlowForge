@@ -15,8 +15,8 @@ import { cn } from '../../utils/classNames';
 const registerSchema = z.object({
   fullName: z.string().min(2, 'Name must be at least 2 characters').max(100, 'Name is too long'),
   email: z.string().min(1, 'Email is required').email('Please enter a valid email address'),
-  organizationType: z.enum(['clinic', 'school'], {
-    required_error: 'Please select an organization type'
+  organizationType: z.string().refine(val => ['clinic', 'school'].includes(val), {
+    message: 'Please select an organization type'
   }),
   password: z.string()
     .min(8, 'Password must be at least 8 characters')
@@ -63,7 +63,7 @@ const RegisterPage: React.FC = () => {
       setServerError(null);
       const response = await authService.register({
         ...data,
-        orgType: data.organizationType
+        orgType: data.organizationType as any
       });
       
       if (response.data.success) {

@@ -34,7 +34,7 @@ const IntakeReviewPage: React.FC = () => {
 
   const assembleMutation = useMutation({
     mutationFn: () => (intakeService as any).assembleBundle(projectId!),
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       if (data.isValidated) {
         toast.success('Workflow bundle assembled successfully!');
         navigate(`/project/${projectId}/generating`);

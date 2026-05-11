@@ -31,6 +31,7 @@ const formatDate = (dateString: string): string => {
 
 interface ProjectCardProps {
   project: Project;
+  isResuming?: boolean;
   onOpen: () => void;
   onDuplicate: () => void;
   onArchive: () => void;

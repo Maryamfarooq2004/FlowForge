@@ -41,6 +41,14 @@ const intakeService = {
   // Get domain-specific questions
   getQuestions: (category: 'clinic' | 'school') =>
     axiosInstance.get(`/intake/questions?category=${category}`).then(res => res.data.data),
+
+  // Get AI-powered suggestions
+  getSuggestions: (content: string, screenSlug: string, domain: string) =>
+    axiosInstance.post<ApiResponse<{ suggestions: string[] }>>('/ai/suggestions', {
+      content,
+      screenSlug,
+      domain,
+    }).then(res => res.data.data),
 };
 
 export default intakeService;

@@ -59,7 +59,7 @@ export const CloseEndedForm: React.FC<CloseEndedFormProps> = ({
 
   // Auto-save logic
   const saveMutation = useMutation({
-    mutationFn: (data: Record<string, any>) => intakeService.submitForm(projectId, data),
+    mutationFn: (data: Record<string, any>) => (intakeService as any).saveStructuredForm(projectId, data),
     onSuccess: () => {
       setLastSaved(new Date());
       setIsDirty(false);

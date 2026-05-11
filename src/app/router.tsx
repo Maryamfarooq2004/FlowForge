@@ -2,7 +2,7 @@ import { lazy, Suspense } from 'react';
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { ProtectedRoute, PublicOnlyRoute } from '../components/shared/ProtectedRoute';
 import { AppShell } from '../components/layout/AppShell';
-import { LoadingScreen } from '../components/shared/LoadingScreen';
+import LoadingScreen from '../components/shared/LoadingScreen';
 
 // Lazy load all pages for code splitting
 const LoginPage         = lazy(() => import('../pages/auth/LoginPage'));

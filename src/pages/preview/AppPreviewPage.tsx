@@ -11,6 +11,7 @@ import {
   Sparkles,
   Send,
 } from 'lucide-react';
+import { useProject } from '../../hooks/useProjects';
 import { GeneratedAppLogin } from '../../features/preview/components/GeneratedAppLogin';
 import { GeneratedAppShell } from '../../features/preview/components/GeneratedAppShell';
 import type { AppScreen, AppRole } from '../../features/preview/components/GeneratedAppShell';
@@ -25,6 +26,7 @@ import { GeneratedAppNotifications } from '../../features/preview/components/Gen
 const AppPreviewPage: React.FC = () => {
   const navigate = useNavigate();
   const { projectId } = useParams();
+  const { data: project } = useProject(projectId);
 
   const [activeRole, setActiveRole] = useState<AppRole>('Receptionist');
   const [roleMenuOpen, setRoleMenuOpen] = useState(false);

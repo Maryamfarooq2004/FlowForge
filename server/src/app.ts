@@ -9,6 +9,7 @@ import authRoutes from './routes/auth.routes';
 import adminRoutes from './routes/admin.routes';
 import intakeRoutes from './routes/intake.routes';
 import projectRoutes from './routes/project.routes';
+import aiRoutes from './routes/ai.routes';
 export const createApp = (): Application => {
   const app = express();
 
@@ -95,6 +96,7 @@ export const createApp = (): Application => {
   app.use('/api/v1/admin', adminRoutes);
   app.use('/api/v1/intake', intakeRoutes);
   app.use('/api/v1/projects', projectRoutes);
+  app.use('/api/v1/ai', aiRoutes);
   // Nested route: /api/v1/projects/:projectId/intake
   app.use('/api/v1/projects/:projectId/intake', intakeRoutes);
   // ── STEP 10: 404 handler

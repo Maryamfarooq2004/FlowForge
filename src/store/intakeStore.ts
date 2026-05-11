@@ -121,7 +121,11 @@ export const useIntakeStore = create<IntakeStore>()(
       saveScreen: async (projectId, screen, text) => {
         set({ autoSaveStatus: 'saving' });
         try {
-          const result = await intakeService.saveScreen(projectId, screen, text);
+          const result = await (intakeService as any).saveGuidedScreen(projectId, screen, {
+            content: text,
+            detectedItems: [],
+            confirmedItems: [],
+          });
           // Sync completedScreens from server response
           set({
             autoSaveStatus: 'saved',

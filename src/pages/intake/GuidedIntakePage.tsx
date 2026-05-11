@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { useIntakeBundle, useSaveGuidedScreen, useAutoSaveScreen } from '../../hooks/useIntake';
 import { useProject } from '../../hooks/useProjects';
+import { AISuggestions } from '../../components/intake/AISuggestions';
 
 // Screen number comes from the route
 // /project/:projectId/intake/story  → screen 1
@@ -138,10 +139,10 @@ export default function GuidedIntakePage({ screenSlug }: GuidedIntakePageProps) 
   };
 
   const screenSubtitles: Record<string, string> = {
-    story: 'Walk us through your process from start to finish.',
-    roles: 'Describe everyone who plays a part in the workflow.',
-    data:  'Think of your register or Excel — what do you write down?',
-    rules: 'Describe your policies as you would to a new employee.',
+    story: `Walk us through your ${project?.domain || 'business'} process from start to finish.`,
+    roles: `Describe everyone who plays a part in the ${project?.domain || 'business'} workflow.`,
+    data:  `Think of your ${project?.domain === 'clinic' ? 'register' : 'enrollment files'} or Excel — what do you write down?`,
+    rules: `Describe your ${project?.domain || 'business'} policies as you would to a new employee.`,
   };
 
   const placeholders: Record<string, string> = {
@@ -209,6 +210,17 @@ export default function GuidedIntakePage({ screenSlug }: GuidedIntakePageProps) 
                      text-sm resize-none outline-none transition-all
                      focus:border-[#0F766E] focus:ring-2 focus:ring-teal-100
                      placeholder:text-slate-400"
+        />
+
+        <AISuggestions
+          content={content}
+          screenSlug={screenSlug}
+          domain={project?.domain || 'business'}
+          onSelectSuggestion={(suggestion) => {
+            const trimmed = content.trim();
+            const suffix = trimmed.length > 0 ? (trimmed.endsWith('.') ? ' ' : '. ') : '';
+            setContent(trimmed + suffix + suggestion + '. ');
+          }}
         />
 
         {/* Progress bar */}

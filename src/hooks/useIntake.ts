@@ -51,3 +51,13 @@ export const useSaveStructuredForm = (projectId: string) => {
       intakeService.saveStructuredForm(projectId, formData),
   });
 };
+
+// AI Suggestions hook
+export const useAISuggestions = (content: string, screenSlug: string, domain: string) => {
+  return useQuery({
+    queryKey: ['suggestions', screenSlug, domain, content],
+    queryFn: () => intakeService.getSuggestions(content, screenSlug, domain),
+    enabled: content.length > 20, // Only fetch after some typing
+    staleTime: 5000,
+  });
+};

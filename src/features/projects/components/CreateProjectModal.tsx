@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, Stethoscope, GraduationCap, Sparkles } from 'lucide-react';
 import { useCreateProject } from '../../../hooks/useProjects';

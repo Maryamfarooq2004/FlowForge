@@ -10,11 +10,13 @@ import { Outlet } from 'react-router-dom';
 interface AppShellProps {
   sidebarType?: 'hub' | 'project';
   className?: string;
+  children?: React.ReactNode;
 }
 
 export const AppShell: React.FC<AppShellProps> = ({ 
   sidebarType = 'hub',
-  className
+  className,
+  children
 }) => {
   return (
     <div className="h-screen bg-[#F8FAFC] flex flex-col overflow-hidden">
@@ -26,7 +28,7 @@ export const AppShell: React.FC<AppShellProps> = ({
         <div className="flex-1 overflow-y-auto">
           <main className={cn("p-8", className)}>
             <div className="max-w-7xl mx-auto">
-              <Outlet />
+              {children || <Outlet />}
             </div>
           </main>
           <Footer />
