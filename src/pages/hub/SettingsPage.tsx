@@ -1,22 +1,14 @@
 import React, { useState } from 'react';
-import { 
-  Search, 
-  Lock, 
-  ChevronDown, 
-  ChevronUp, 
-  UploadCloud, 
-  Plus, 
-  Info,
-  CheckCircle2
-} from 'lucide-react';
+import { Mail, Search, Lock, ChevronDown, ChevronUp, UploadCloud, Plus, Info, CheckCircle2 } from 'lucide-react';
 import { AppShell } from '../../components/layout/AppShell';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { cn } from '../../utils/classNames';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mail } from 'lucide-react';
+import { useAuthStore } from '../../store/authStore';
 
 const SettingsPage: React.FC = () => {
+  const { user } = useAuthStore();
   const [isPasswordOpen, setIsPasswordOpen] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState(85); // Mock strength
   const [isEmailPending, setIsEmailPending] = useState(true); // Mock pending state

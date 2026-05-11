@@ -7,13 +7,19 @@ import type { ProjectDomain } from '../../../types/project.types';
 interface Props {
   isOpen: boolean;
   onClose: () => void;
+  initialDomain?: 'clinic' | 'school' | null;
 }
 
-export const CreateProjectModal = ({ isOpen, onClose }: Props) => {
+export const CreateProjectModal = ({ isOpen, onClose, initialDomain }: Props) => {
   const navigate = useNavigate();
   const [name, setName] = useState('');
-  const [domain, setDomain] = useState<ProjectDomain | null>(null);
+  const [domain, setDomain] = useState<ProjectDomain | null>(initialDomain || null);
   const [nameError, setNameError] = useState('');
+
+  // Update domain if initialDomain changes
+  React.useEffect(() => {
+    if (initialDomain) setDomain(initialDomain);
+  }, [initialDomain]);
 
   const { mutate: createProject, isPending } = useCreateProject();
 

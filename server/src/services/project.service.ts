@@ -54,7 +54,6 @@ export const createProjectService = async (
   name: string,
   domain: 'clinic' | 'school'
 ) => {
-  let project: IProject;
   try {
     project = await Project.create({
       name: name.trim(),
@@ -63,11 +62,13 @@ export const createProjectService = async (
       status: 'INTAKE',
       progress: {
         currentPhase: 'intake_form',
-        lastActiveScreen: `/project/ID/intake/form`,
+        lastActiveScreen: `/project/TEMP/intake/form`,
         completedSteps: [],
       },
     });
+    console.log(`[ProjectService] SUCCESS: Created Project document: ${project._id}`);
   } catch (err: any) {
+    console.error(`[ProjectService] ERROR: Failed to create Project document:`, err);
     if (err.code === 11000) {
       throw new AppError(
         'You already have a project with this name.',
@@ -79,22 +80,31 @@ export const createProjectService = async (
   }
 
   // Create empty IntakeBundle for this project immediately
-  await IntakeBundle.create({
-    projectId: project._id,
-    userId,
-    domain,
-    structuredFormData: {},
-    guidedScreens: [
-      { screen: 1, content: '', detectedItems: [], confirmedItems: [], isComplete: false, savedAt: new Date() },
-      { screen: 2, content: '', detectedItems: [], confirmedItems: [], isComplete: false, savedAt: new Date() },
-      { screen: 3, content: '', detectedItems: [], confirmedItems: [], isComplete: false, savedAt: new Date() },
-      { screen: 4, content: '', detectedItems: [], confirmedItems: [], isComplete: false, savedAt: new Date() },
-    ],
-  });
+  try {
+    const intake = await IntakeBundle.create({
+      projectId: project._id,
+      userId,
+      domain,
+      structuredFormData: {},
+      guidedScreens: [
+        { screen: 1, content: '', detectedItems: [], confirmedItems: [], isComplete: false, savedAt: new Date() },
+        { screen: 2, content: '', detectedItems: [], confirmedItems: [], isComplete: false, savedAt: new Date() },
+        { screen: 3, content: '', detectedItems: [], confirmedItems: [], isComplete: false, savedAt: new Date() },
+        { screen: 4, content: '', detectedItems: [], confirmedItems: [], isComplete: false, savedAt: new Date() },
+      ],
+    });
+    console.log(`[ProjectService] SUCCESS: Created IntakeBundle document: ${intake._id}`);
+  } catch (err: any) {
+    console.error(`[ProjectService] ERROR: Failed to create IntakeBundle for project ${project._id}:`, err);
+    // Cleanup the project if bundle creation fails to maintain consistency
+    await Project.findByIdAndDelete(project._id);
+    throw new AppError('Failed to initialize project data. Please try again.', 500);
+  }
 
   // Update progress with real project ID
   project.progress.lastActiveScreen = `/project/${project._id}/intake/form`;
   await project.save();
+  console.log(`[ProjectService] SUCCESS: Finalized project ${project._id} with real lastActiveScreen.`);
 
   return project;
 };

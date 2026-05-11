@@ -45,7 +45,7 @@ export const OnboardingPage: React.FC = () => {
               </h1>
               
               <p className="text-lg md:text-xl text-slate-500 max-w-2xl mx-auto mb-16 leading-relaxed">
-                You're moments away from turning your clinic's workflow into a fully working application — no code required.
+                You're moments away from turning your {user?.orgType || 'organization'}'s workflow into a fully working application — no code required.
               </p>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16 text-left">
@@ -178,7 +178,7 @@ export const OnboardingPage: React.FC = () => {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-12">
                 <button
-                  onClick={() => navigate('/project/new/domain')}
+                  onClick={() => navigate('/hub', { state: { openCreateModal: true, domain: 'clinic' } })}
                   className="bg-white border-2 border-slate-200 hover:border-[#0F766E] rounded-2xl p-8 text-left transition-all hover:shadow-lg group flex flex-col items-center text-center"
                 >
                   <div className="w-20 h-20 rounded-full bg-teal-50 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
@@ -189,7 +189,7 @@ export const OnboardingPage: React.FC = () => {
                 </button>
 
                 <button
-                  onClick={() => navigate('/project/new/domain')}
+                  onClick={() => navigate('/hub', { state: { openCreateModal: true, domain: 'school' } })}
                   className="bg-white border-2 border-slate-200 hover:border-[#4F46E5] rounded-2xl p-8 text-left transition-all hover:shadow-lg group flex flex-col items-center text-center"
                 >
                   <div className="w-20 h-20 rounded-full bg-indigo-50 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
@@ -202,7 +202,7 @@ export const OnboardingPage: React.FC = () => {
 
               <div className="text-center">
                 <Button 
-                  onClick={() => navigate('/project/new/domain')}
+                  onClick={() => navigate('/hub', { state: { openCreateModal: true } })}
                   className="h-14 px-8 bg-slate-900 hover:bg-slate-800 text-white font-bold text-lg rounded-xl"
                 >
                   Create my first project <ArrowRight size={20} className="ml-2" />

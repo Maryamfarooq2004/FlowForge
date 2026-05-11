@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Plus, FolderOpen, Sparkles } from 'lucide-react';
 import {
   useProjects,
@@ -14,8 +15,22 @@ import { ProjectCardSkeleton } from '../../features/projects/components/ProjectC
 import { CreateProjectModal } from '../../features/projects/components/CreateProjectModal';
 
 export default function ProjectHubPage() {
+  const location = useLocation();
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [initialDomain, setInitialDomain] = useState<'clinic' | 'school' | null>(null);
   const [activeTab, setActiveTab] = useState<'all' | 'archived'>('all');
+
+  // Handle state from onboarding
+  useEffect(() => {
+    if (location.state?.openCreateModal) {
+      setShowCreateModal(true);
+      if (location.state?.domain) {
+        setInitialDomain(location.state.domain);
+      }
+      // Clear state so it doesn't reopen on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   // REAL user data from MongoDB via auth store
   const { user } = useAuthStore();
@@ -103,7 +118,11 @@ export default function ProjectHubPage() {
         </div>
         <CreateProjectModal
           isOpen={showCreateModal}
-          onClose={() => setShowCreateModal(false)}
+          onClose={() => {
+            setShowCreateModal(false);
+            setInitialDomain(null);
+          }}
+          initialDomain={initialDomain}
         />
       </div>
     );
@@ -194,7 +213,11 @@ export default function ProjectHubPage() {
 
       <CreateProjectModal
         isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
+        onClose={() => {
+          setShowCreateModal(false);
+          setInitialDomain(null);
+        }}
+        initialDomain={initialDomain}
       />
     </div>
   );

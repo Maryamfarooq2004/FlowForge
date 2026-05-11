@@ -8,6 +8,7 @@ import { LoadingScreen } from '../components/shared/LoadingScreen';
 const LoginPage         = lazy(() => import('../pages/auth/LoginPage'));
 const RegisterPage      = lazy(() => import('../pages/auth/RegisterPage'));
 const ProjectHubPage    = lazy(() => import('../pages/hub/ProjectHubPage'));
+const OnboardingPage    = lazy(() => import('../pages/onboarding/OnboardingPage'));
 const SettingsPage      = lazy(() => import('../pages/hub/SettingsPage'));
 const NotFound          = lazy(() => import('../components/shared/NotFound'));
 
@@ -46,6 +47,7 @@ export const router = createBrowserRouter([
     ),
     children: [
       { path: 'hub',       element: withSuspense(ProjectHubPage) },
+      { path: 'onboarding', element: withSuspense(OnboardingPage) },
       { path: 'hub/settings',  element: withSuspense(SettingsPage) },
       
       // Intake Flow
