@@ -22,10 +22,12 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { cn } from '../../utils/classNames';
+import { useAuthStore } from '../../store/authStore';
 
 const IntakeReviewPage: React.FC = () => {
   const navigate = useNavigate();
   const { projectId } = useParams<{ projectId: string }>();
+  const { user } = useAuthStore();
   const [assembling, setAssembling] = useState(false);
 
   // Fetch intake bundle data
@@ -69,7 +71,7 @@ const IntakeReviewPage: React.FC = () => {
 
   const wordCount = bundle?.bundleJson?.metadata?.totalWordCount || 0;
   const rolesCount = (bundle?.screen2PeopleRoles?.match(/\b(receptionist|doctor|nurse|manager|admin|teacher|principal|staff|cashier|coordinator|head|officer)\b/gi) || []).length;
-  const isFormComplete = bundle?.status !== 'draft';
+  const isFormComplete = bundle?.status && ['form_complete', 'screens_complete', 'assembled'].includes(bundle.status);
   const screensCompleted = bundle?.completedScreens?.length || 0;
 
   return (
@@ -90,7 +92,7 @@ const IntakeReviewPage: React.FC = () => {
           <button className="text-white/70 hover:text-white">
             <Bell size={20} />
           </button>
-          <Avatar name="Maryam Farooq" size="sm" className="bg-[#34D399] text-[#134E4A]" />
+          <Avatar name={user?.fullName || 'User'} size="sm" className="bg-[#34D399] text-[#134E4A]" />
         </div>
       </nav>
 

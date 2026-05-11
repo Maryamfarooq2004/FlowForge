@@ -48,7 +48,7 @@ const IntakeFormPage: React.FC = () => {
 
   return (
     <CloseEndedForm 
-      projectId={project._id}
+      projectId={project.id}
       category={project.domain as 'clinic' | 'school'}
       questions={questions}
       initialValues={bundle?.structuredForm || {}}

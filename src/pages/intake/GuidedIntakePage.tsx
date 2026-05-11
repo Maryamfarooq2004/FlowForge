@@ -24,11 +24,13 @@ import { Button } from '../../components/ui/Button';
 import { cn } from '../../utils/classNames';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useIntakeStore } from '../../store/intakeStore';
+import { useAuthStore } from '../../store/authStore';
 import { toast } from 'react-hot-toast';
 
 const GuidedIntakePage: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
+  const { user } = useAuthStore();
   
   // Store state
   const { 
@@ -51,7 +53,7 @@ const GuidedIntakePage: React.FC = () => {
   const [selectedData, setSelectedData] = useState<string[]>(['Patient Name', 'Phone Number', 'Appointment Date', 'Reason for Visit', 'Symptoms Described', 'Doctor\'s Diagnosis', 'Medicines Prescribed', 'Fee Amount Charged', 'Payment Status']);
   
   // Auto-save timer ref
-  const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (projectId) {
@@ -178,7 +180,7 @@ const GuidedIntakePage: React.FC = () => {
           <button className="text-white/70 hover:text-white">
             <Bell size={20} />
           </button>
-          <Avatar name="Maryam Farooq" size="sm" className="bg-[#34D399] text-[#134E4A]" />
+          <Avatar name={user?.fullName || 'User'} size="sm" className="bg-[#34D399] text-[#134E4A]" />
         </div>
       </nav>
 

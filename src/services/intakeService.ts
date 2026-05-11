@@ -22,7 +22,14 @@ export interface IntakeBundleResponse {
   screen3DataTracking?: string;
   screen4RulesExceptions?: string;
   completedScreens?: number[];
-  bundleJson?: Record<string, unknown> | null;
+  bundleJson?: {
+    metadata: {
+      totalWordCount: number;
+      completedScreens: number[];
+      hasDocuments: boolean;
+    };
+    [key: string]: any;
+  } | null;
   bundleVersion?: number;
   validationErrors?: string[];
   isValidated?: boolean;
