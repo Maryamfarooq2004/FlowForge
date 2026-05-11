@@ -30,6 +30,18 @@ export const useProjects = (filters?: Record<string, any>) =>
     }),
   });
 
+export const useArchivedProjects = () =>
+  useQuery({
+    queryKey: projectKeys.archived(),
+    queryFn: async () => {
+      const res = await projectService.getArchivedProjects();
+      return res.data.data;
+    },
+    select: (data) => ({
+      projects: data?.items ?? [],
+    }),
+  });
+
 // ── FIRST TIME USER CHECK ──────────────────────────────────────
 export const useIsFirstTimeUser = () =>
   useQuery({

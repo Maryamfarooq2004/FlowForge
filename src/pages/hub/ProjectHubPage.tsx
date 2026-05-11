@@ -8,6 +8,7 @@ import {
   useArchiveProject,
   useDeleteProject,
   useDuplicateProject,
+  useArchivedProjects,
 } from '../../hooks/useProjects';
 import { useAuthStore } from '../../store/authStore';
 import { ProjectCard } from '../../features/projects/components/ProjectCard';
@@ -36,8 +37,13 @@ export default function ProjectHubPage() {
   const { user } = useAuthStore();
 
   // REAL projects from MongoDB — filtered to this user only
-  const { data, isLoading, isError, refetch } = useProjects();
-  const projects = data?.projects ?? [];
+  const { data: activeData, isLoading: loadingActive, isError: errorActive, refetch: refetchActive } = useProjects();
+  const { data: archivedData, isLoading: loadingArchived, isError: errorArchived, refetch: refetchArchived } = useArchivedProjects();
+
+  const projects = activeTab === 'all' ? (activeData?.projects ?? []) : (archivedData?.projects ?? []);
+  const isLoading = activeTab === 'all' ? loadingActive : loadingArchived;
+  const isError = activeTab === 'all' ? errorActive : errorArchived;
+  const refetch = activeTab === 'all' ? refetchActive : refetchArchived;
 
   // Check if first time user (no projects in DB)
   const { data: isFirstTime, isLoading: checkingFirstTime } = useIsFirstTimeUser();
