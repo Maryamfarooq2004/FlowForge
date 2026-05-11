@@ -1,4 +1,6 @@
 import express, { Application, Request, Response, NextFunction } from 'express';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import cors from 'cors';
 import helmet from 'helmet';
 import mongoSanitize from 'express-mongo-sanitize';
@@ -10,6 +12,10 @@ import adminRoutes from './routes/admin.routes';
 import intakeRoutes from './routes/intake.routes';
 import projectRoutes from './routes/project.routes';
 import aiRoutes from './routes/ai.routes';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 export const createApp = (): Application => {
   const app = express();
 
@@ -99,7 +105,19 @@ export const createApp = (): Application => {
   app.use('/api/v1/ai', aiRoutes);
   // Nested route: /api/v1/projects/:projectId/intake
   app.use('/api/v1/projects/:projectId/intake', intakeRoutes);
-  // ── STEP 10: 404 handler
+
+  // ── STEP 9.5: Serve static frontend files
+  const publicPath = path.join(__dirname, '../public');
+  app.use(express.static(publicPath));
+
+  // Catch-all for SPA routing (redirect all non-API requests to index.html)
+  app.get('*', (req, res, next) => {
+    // If it starts with /api, skip to 404 handler
+    if (req.url.startsWith('/api')) return next();
+    res.sendFile(path.join(publicPath, 'index.html'));
+  });
+
+  // ── STEP 10: 404 handler for API only
   app.use((req, res) => {
     res.status(404).json({
       success: false,
