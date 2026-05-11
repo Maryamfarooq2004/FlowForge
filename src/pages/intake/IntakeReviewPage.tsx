@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { Logo } from '../../components/shared/Logo';
 import { Avatar } from '../../components/ui/Avatar';
 import { Button } from '../../components/ui/Button';
+import intakeService from '../../services/intakeService';
 import { 
   Bell, 
   BookOpen, 
@@ -14,20 +16,61 @@ import {
   AlertTriangle,
   XCircle,
   Info,
-  ArrowRight
+  ArrowRight,
+  Loader2,
+  AlertCircle
 } from 'lucide-react';
+import { toast } from 'react-hot-toast';
+import { cn } from '../../utils/classNames';
 
 const IntakeReviewPage: React.FC = () => {
   const navigate = useNavigate();
-  const { projectId } = useParams();
+  const { projectId } = useParams<{ projectId: string }>();
+  const [assembling, setAssembling] = useState(false);
 
-  const handleNext = () => {
-    navigate(`/project/${projectId || 'new'}/documents`);
+  // Fetch intake bundle data
+  const { data: bundle, isLoading } = useQuery({
+    queryKey: ['intakeBundle', projectId],
+    queryFn: () => intakeService.getIntake(projectId!),
+    enabled: !!projectId,
+  });
+
+  const assembleMutation = useMutation({
+    mutationFn: () => intakeService.assembleBundle(projectId!),
+    onSuccess: (data) => {
+      if (data.isValidated) {
+        toast.success('Workflow bundle assembled successfully!');
+        navigate(`/project/${projectId}/generating`);
+      } else {
+        toast.error('Validation failed. Please check the errors.');
+      }
+    },
+    onError: (error: any) => {
+      const msg = error.response?.data?.message || 'Failed to assemble bundle';
+      toast.error(msg);
+    }
+  });
+
+  const handleNext = async () => {
+    assembleMutation.mutate();
   };
 
   const handleBack = () => {
-    navigate(`/project/${projectId || 'new'}/intake/story`);
+    navigate(`/project/${projectId}/intake/story`);
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-[#0F766E]" />
+      </div>
+    );
+  }
+
+  const wordCount = bundle?.bundleJson?.metadata?.totalWordCount || 0;
+  const rolesCount = (bundle?.screen2PeopleRoles?.match(/\b(receptionist|doctor|nurse|manager|admin|teacher|principal|staff|cashier|coordinator|head|officer)\b/gi) || []).length;
+  const isFormComplete = bundle?.status !== 'draft';
+  const screensCompleted = bundle?.completedScreens?.length || 0;
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col overflow-hidden">
@@ -62,6 +105,20 @@ const IntakeReviewPage: React.FC = () => {
             </p>
           </div>
 
+          {assembleMutation.data?.validationErrors && assembleMutation.data.validationErrors.length > 0 && (
+            <div className="bg-red-50 border border-red-200 rounded-2xl p-6 space-y-3">
+              <div className="flex items-center space-x-2 text-red-800 font-bold">
+                <AlertCircle size={20} />
+                <span>Validation Errors Detected</span>
+              </div>
+              <ul className="list-disc list-inside text-sm text-red-700 space-y-1">
+                {assembleMutation.data.validationErrors.map((err, i) => (
+                  <li key={i}>{err}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm">
             <h2 className="font-poppins text-[22px] font-bold text-[#0F766E] mb-6">Intake Summary</h2>
 
@@ -74,12 +131,15 @@ const IntakeReviewPage: React.FC = () => {
                   </div>
                   <div>
                     <h3 className="font-semibold text-slate-800">Workflow Story</h3>
-                    <p className="text-sm text-slate-500">312 words captured</p>
+                    <p className="text-sm text-slate-500">{wordCount} words captured</p>
                   </div>
                 </div>
-                <div className="flex items-center space-x-1.5 bg-green-50 text-green-700 px-3 py-1 rounded-full text-xs font-bold border border-green-100">
-                  <CheckCircle2 size={14} />
-                  <span>Complete</span>
+                <div className={cn(
+                  "flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-bold border",
+                  screensCompleted >= 1 ? "bg-green-50 text-green-700 border-green-100" : "bg-slate-50 text-slate-500 border-slate-100"
+                )}>
+                  {screensCompleted >= 1 ? <CheckCircle2 size={14} /> : <XCircle size={14} />}
+                  <span>{screensCompleted >= 1 ? 'Complete' : 'Incomplete'}</span>
                 </div>
               </div>
 
@@ -91,12 +151,15 @@ const IntakeReviewPage: React.FC = () => {
                   </div>
                   <div>
                     <h3 className="font-semibold text-slate-800">People & Roles</h3>
-                    <p className="text-sm text-slate-500">3 roles: Receptionist, Doctor, Manager</p>
+                    <p className="text-sm text-slate-500">{rolesCount} roles identified</p>
                   </div>
                 </div>
-                <div className="flex items-center space-x-1.5 bg-green-50 text-green-700 px-3 py-1 rounded-full text-xs font-bold border border-green-100">
-                  <CheckCircle2 size={14} />
-                  <span>Complete</span>
+                <div className={cn(
+                  "flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-bold border",
+                  rolesCount >= 2 ? "bg-green-50 text-green-700 border-green-100" : "bg-amber-50 text-amber-700 border-amber-100"
+                )}>
+                  {rolesCount >= 2 ? <CheckCircle2 size={14} /> : <AlertTriangle size={14} />}
+                  <span>{rolesCount >= 2 ? 'Complete' : 'Needs More Info'}</span>
                 </div>
               </div>
 
@@ -107,30 +170,16 @@ const IntakeReviewPage: React.FC = () => {
                     <BarChart2 size={20} />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-slate-800">Data & Tracking</h3>
-                    <p className="text-sm text-slate-500">3 stages, 12 fields captured</p>
+                    <h3 className="font-semibold text-slate-800">Workflow Progress</h3>
+                    <p className="text-sm text-slate-500">{screensCompleted} of 4 screens completed</p>
                   </div>
                 </div>
-                <div className="flex items-center space-x-1.5 bg-green-50 text-green-700 px-3 py-1 rounded-full text-xs font-bold border border-green-100">
-                  <CheckCircle2 size={14} />
-                  <span>Complete</span>
-                </div>
-              </div>
-
-              {/* Row 4: Rules */}
-              <div className="flex items-center justify-between py-4 border-b border-slate-100">
-                <div className="flex items-center space-x-4">
-                  <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-600">
-                    <Scale size={20} />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-slate-800">Business Rules</h3>
-                    <p className="text-sm text-slate-500">1 rule captured — consider adding more for better results</p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-1.5 bg-amber-50 text-amber-700 px-3 py-1 rounded-full text-xs font-bold border border-amber-100">
-                  <AlertTriangle size={14} />
-                  <span>Good — can improve</span>
+                <div className={cn(
+                  "flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-bold border",
+                  screensCompleted === 4 ? "bg-green-50 text-green-700 border-green-100" : "bg-amber-50 text-amber-700 border-amber-100"
+                )}>
+                  {screensCompleted === 4 ? <CheckCircle2 size={14} /> : <AlertTriangle size={14} />}
+                  <span>{screensCompleted === 4 ? 'Complete' : 'Partial'}</span>
                 </div>
               </div>
 
@@ -141,16 +190,26 @@ const IntakeReviewPage: React.FC = () => {
                     <ClipboardList size={20} />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-slate-800">Structured Form Answers</h3>
-                    <p className="text-sm text-slate-500">Notification channels not selected</p>
+                    <h3 className="font-semibold text-slate-800">Structured Form</h3>
+                    <p className="text-sm text-slate-500">{isFormComplete ? 'Basic info captured' : 'Form not yet submitted'}</p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-3">
-                  <div className="flex items-center space-x-1.5 bg-red-50 text-red-700 px-3 py-1 rounded-full text-xs font-bold border border-red-100">
-                    <XCircle size={14} />
-                    <span>Incomplete</span>
+                  <div className={cn(
+                    "flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-bold border",
+                    isFormComplete ? "bg-green-50 text-green-700 border-green-100" : "bg-red-50 text-red-700 border-red-100"
+                  )}>
+                    {isFormComplete ? <CheckCircle2 size={14} /> : <XCircle size={14} />}
+                    <span>{isFormComplete ? 'Complete' : 'Incomplete'}</span>
                   </div>
-                  <button className="text-[#0F766E] text-sm font-semibold hover:underline">Fix This →</button>
+                  {!isFormComplete && (
+                    <button 
+                      onClick={() => navigate(`/project/${projectId}/intake/form`)}
+                      className="text-[#0F766E] text-sm font-semibold hover:underline"
+                    >
+                      Fix This →
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -158,16 +217,12 @@ const IntakeReviewPage: React.FC = () => {
             {/* Stats Row */}
             <div className="flex gap-4 mt-6">
               <div className="bg-slate-50 rounded-xl p-4 flex-1 text-center">
-                <div className="font-bold text-slate-800">12 data fields</div>
-                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">CAPTURED</div>
-              </div>
-              <div className="bg-slate-50 rounded-xl p-4 flex-1 text-center">
-                <div className="font-bold text-slate-800">3 roles</div>
+                <div className="font-bold text-slate-800">{rolesCount} roles</div>
                 <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">IDENTIFIED</div>
               </div>
               <div className="bg-slate-50 rounded-xl p-4 flex-1 text-center">
-                <div className="font-bold text-slate-800">1 business rule</div>
-                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">DEFINED</div>
+                <div className="font-bold text-slate-800">{screensCompleted}/4 steps</div>
+                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">COMPLETED</div>
               </div>
             </div>
 
@@ -191,10 +246,17 @@ const IntakeReviewPage: React.FC = () => {
             
             <Button 
               onClick={handleNext}
-              className="h-14 px-8 rounded-2xl bg-gradient-to-r from-[#0F766E] to-[#4F46E5] text-white font-bold flex items-center space-x-3 shadow-xl shadow-teal-900/10 transition-transform active:scale-[0.98]"
+              disabled={assembleMutation.isPending}
+              className="h-14 px-8 rounded-2xl bg-gradient-to-r from-[#0F766E] to-[#4F46E5] text-white font-bold flex items-center space-x-3 shadow-xl shadow-teal-900/10 transition-transform active:scale-[0.98] disabled:opacity-70"
             >
-              <span>Send to AI & Build My Blueprint</span>
-              <ArrowRight size={20} />
+              {assembleMutation.isPending ? (
+                <><Loader2 className="animate-spin" size={20} /> <span>Assembling...</span></>
+              ) : (
+                <>
+                  <span>Send to AI & Build My Blueprint</span>
+                  <ArrowRight size={20} />
+                </>
+              )}
             </Button>
           </div>
 

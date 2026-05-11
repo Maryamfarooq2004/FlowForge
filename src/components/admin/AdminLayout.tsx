@@ -17,7 +17,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
 }) => {
   return (
     <div className="h-screen bg-[#F8FAFC] flex flex-col overflow-hidden">
-      <Navbar currentSection={currentSection} isAdmin={true} />
+      <Navbar />
       
       <div className="flex flex-1 overflow-hidden">
         <AdminSidebar />

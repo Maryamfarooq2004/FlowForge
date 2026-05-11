@@ -11,7 +11,7 @@ import { useAuthStore } from '../../store/authStore';
 import authService from '../../services/authService';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
-
+import { useLogin } from '../../hooks/useAuth';
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
@@ -24,7 +24,7 @@ const LoginPage: React.FC = () => {
   const [loginError, setLoginError] = useState<string | null>(null);
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [lockoutTimeLeft, setLockoutTimeLeft] = useState(0);
-  const { login, isLoading } = useAuthStore();
+  const { mutate: login, isPending: isLoading } = useLogin();
   const navigate = useNavigate();
 
   // Timer for lockout
@@ -54,29 +54,21 @@ const LoginPage: React.FC = () => {
     resolver: zodResolver(loginSchema),
   });
 
-  const onSubmit = async (data: LoginFormValues) => {
+  const onSubmit = (data: LoginFormValues) => {
     if (lockoutTimeLeft > 0) return;
     setLoginError(null);
-    try {
-      const response = await authService.login(data);
-      const { user, accessToken } = response.data.data;
-      
-      useAuthStore.getState().setUser(user);
-      useAuthStore.getState().setAccessToken(accessToken);
-      useAuthStore.getState().setAuthenticated(true);
-      
-      navigate('/hub');
-    } catch (err: any) {
-      const code = err.response?.data?.code;
-      const message = err.response?.data?.message || err.response?.data?.error || 'Login failed.';
-      
-      switch (code) {
-        case 'INVALID_CREDENTIALS':
-          setLoginError(message);
-          const newAttempts = failedAttempts + 1;
-          setFailedAttempts(newAttempts);
-          if (newAttempts >= 5) setLockoutTimeLeft(15 * 60);
-          break;
+    login(data, {
+      onError: (err: any) => {
+        const code = err.response?.data?.code;
+        const message = err.response?.data?.message || err.response?.data?.error || 'Login failed.';
+        
+        switch (code) {
+          case 'INVALID_CREDENTIALS':
+            setLoginError(message);
+            const newAttempts = failedAttempts + 1;
+            setFailedAttempts(newAttempts);
+            if (newAttempts >= 5) setLockoutTimeLeft(15 * 60);
+            break;
         case 'ACCOUNT_LOCKED':
           setLockoutTimeLeft(15 * 60);
           setFailedAttempts(5);
@@ -89,8 +81,9 @@ const LoginPage: React.FC = () => {
         default:
           setLoginError('An unexpected error occurred. Please try again.');
           console.error('Login error:', err.response?.data);
+        }
       }
-    }
+    });
   };
 
   const isLocked = failedAttempts >= 5 && lockoutTimeLeft > 0;

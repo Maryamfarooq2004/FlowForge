@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { motion } from 'framer-motion';
 import { 
   Check, 
   ChevronLeft, 
@@ -11,7 +12,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { cn } from '../../../utils/classNames';
-import axiosInstance from '../../../lib/axios';
+import intakeService from '../../../services/intakeService';
 
 interface Question {
   id: string;
@@ -58,25 +59,23 @@ export const CloseEndedForm: React.FC<CloseEndedFormProps> = ({
 
   // Auto-save logic
   const saveMutation = useMutation({
-    mutationFn: async (data: Record<string, any>) => {
-      const response = await axiosInstance.patch(`/intake/${projectId}/form`, data);
-      return response.data;
-    },
+    mutationFn: (data: Record<string, any>) => intakeService.submitForm(projectId, data),
     onSuccess: () => {
       setLastSaved(new Date());
       setIsDirty(false);
       queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['intakeBundle', projectId] });
     }
   });
 
   useEffect(() => {
     const timer = setInterval(() => {
-      if (isDirty) {
+      if (isDirty && !saveMutation.isPending) {
         saveMutation.mutate(formValues);
       }
     }, 15000); // Auto-save every 15s
     return () => clearInterval(timer);
-  }, [isDirty, formValues]);
+  }, [isDirty, formValues, saveMutation.isPending]);
 
   const updateField = (id: string, value: any) => {
     setFormValues(prev => ({ ...prev, [id]: value }));
@@ -114,16 +113,20 @@ export const CloseEndedForm: React.FC<CloseEndedFormProps> = ({
 
   const currentQuestions = questions.filter(q => q.section === activeSection);
 
-  const handleNext = () => {
+  const handleNext = async () => {
     const currentIndex = sections.indexOf(activeSection);
     if (currentIndex < sections.length - 1) {
       setActiveSection(sections[currentIndex + 1]);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
       // Final Submit
-      saveMutation.mutate(formValues);
-      toast.success('Form saved successfully!');
-      navigate(`/project/${projectId}/generating`);
+      try {
+        await saveMutation.mutateAsync(formValues);
+        toast.success('Form saved successfully!');
+        navigate(`/project/${projectId}/intake/story`);
+      } catch (error) {
+        toast.error('Failed to save form. Please try again.');
+      }
     }
   };
 

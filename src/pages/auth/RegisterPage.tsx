@@ -61,7 +61,10 @@ const RegisterPage: React.FC = () => {
   const onSubmit = async (data: RegisterFormValues) => {
     try {
       setServerError(null);
-      const response = await authService.register(data);
+      const response = await authService.register({
+        ...data,
+        orgType: data.organizationType
+      });
       
       if (response.data.success) {
         toast.success('Account created! Please log in to continue.');

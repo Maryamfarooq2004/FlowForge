@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Bell, 
   ChevronDown, 
@@ -14,7 +14,8 @@ import {
   Search,
   Trash2,
   Bot,
-  ChevronUp
+  ChevronUp,
+  Loader2
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Logo } from '../../components/shared/Logo';
@@ -22,27 +23,87 @@ import { Avatar } from '../../components/ui/Avatar';
 import { Button } from '../../components/ui/Button';
 import { cn } from '../../utils/classNames';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useIntakeStore } from '../../store/intakeStore';
+import { toast } from 'react-hot-toast';
 
 const GuidedIntakePage: React.FC = () => {
-  const [currentStep, setCurrentStep] = useState(1);
-  const [storyText, setStoryText] = useState('');
-  const [rolesText, setRolesText] = useState('');
+  const { projectId } = useParams<{ projectId: string }>();
+  const navigate = useNavigate();
+  
+  // Store state
+  const { 
+    currentStep, 
+    setCurrentStep,
+    screen1WorkflowStory,
+    screen2PeopleRoles,
+    screen3DataTracking,
+    screen4RulesExceptions,
+    setScreenText,
+    saveScreen,
+    autoSaveStatus,
+    completedScreens,
+    setProjectId
+  } = useIntakeStore();
+
+  // Local state for UI feedback
+  const [isRuleBuilderOpen, setIsRuleBuilderOpen] = useState(false);
   const [detectedRoles, setDetectedRoles] = useState(['Receptionist', 'Doctor', 'Manager']);
   const [selectedData, setSelectedData] = useState<string[]>(['Patient Name', 'Phone Number', 'Appointment Date', 'Reason for Visit', 'Symptoms Described', 'Doctor\'s Diagnosis', 'Medicines Prescribed', 'Fee Amount Charged', 'Payment Status']);
-  const [rulesText, setRulesText] = useState('');
-  const [isRuleBuilderOpen, setIsRuleBuilderOpen] = useState(false);
   
-  const navigate = useNavigate();
-  const { projectId } = useParams();
+  // Auto-save timer ref
+  const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const minCharsStory = 500;
-  const minCharsRoles = 300;
-  
-  const storyProgress = Math.min(Math.round((storyText.length / minCharsStory) * 100), 100);
-  const rolesProgress = Math.min(Math.round((rolesText.length / minCharsRoles) * 100), 100);
+  useEffect(() => {
+    if (projectId) {
+      setProjectId(projectId);
+    }
+  }, [projectId, setProjectId]);
+
+  const minChars = {
+    1: 500,
+    2: 300,
+    3: 50,
+    4: 50
+  };
+
+  const getActiveText = () => {
+    switch(currentStep) {
+      case 1: return screen1WorkflowStory;
+      case 2: return screen2PeopleRoles;
+      case 3: return screen3DataTracking;
+      case 4: return screen4RulesExceptions;
+      default: return '';
+    }
+  };
+
+  const activeText = getActiveText();
+  const activeMinChars = minChars[currentStep as keyof typeof minChars];
+  const progress = Math.min(Math.round((activeText.length / activeMinChars) * 100), 100);
+
+  // Debounced save effect
+  useEffect(() => {
+    if (!projectId || !activeText || activeText.length < 10) return;
+
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+    }
+
+    saveTimerRef.current = setTimeout(() => {
+      saveScreen(projectId, currentStep as 1|2|3|4, activeText);
+    }, 1000);
+
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
+  }, [activeText, currentStep, projectId, saveScreen]);
+
+  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setScreenText(currentStep as 1|2|3|4, e.target.value);
+  };
 
   const addHint = (hint: string) => {
-    setStoryText(prev => prev + (prev ? ' ' : '') + hint);
+    const newText = activeText + (activeText ? ' ' : '') + hint;
+    setScreenText(currentStep as 1|2|3|4, newText);
   };
 
   const removeRole = (role: string) => {
@@ -50,20 +111,24 @@ const GuidedIntakePage: React.FC = () => {
   };
 
   const toggleData = (item: string) => {
-    setSelectedData(prev => 
-      prev.includes(item) ? prev.filter(i => i !== item) : [...prev, item]
-    );
+    setSelectedData(prev => {
+      const updated = prev.includes(item) ? prev.filter(i => i !== item) : [...prev, item];
+      // Also update store text to reflect selection for assembly
+      setScreenText(3, `Selected fields: ${updated.join(', ')}`);
+      return updated;
+    });
   };
 
   const handleNext = () => {
-    if (currentStep === 1 && storyText.length >= minCharsStory) {
-      setCurrentStep(2);
-    } else if (currentStep === 2 && rolesText.length >= minCharsRoles) {
-      setCurrentStep(3);
-    } else if (currentStep === 3) {
-      setCurrentStep(4);
-    } else if (currentStep === 4) {
-      navigate(`/project/${projectId || 'new'}/intake/review`);
+    if (activeText.length < activeMinChars) {
+      toast.error(`Please provide more detail (minimum ${activeMinChars} characters)`);
+      return;
+    }
+
+    if (currentStep < 4) {
+      setCurrentStep((currentStep + 1) as 1|2|3|4);
+    } else {
+      navigate(`/project/${projectId}/intake/review`);
     }
   };
 
@@ -90,7 +155,7 @@ const GuidedIntakePage: React.FC = () => {
           ].map((step) => (
             <button 
               key={step.id}
-              onClick={() => setCurrentStep(step.id)}
+              onClick={() => setCurrentStep(step.id as 1|2|3|4)}
               className={cn(
                 "text-sm font-bold transition-all pb-1 mt-1 border-b-2",
                 currentStep === step.id 
@@ -104,6 +169,12 @@ const GuidedIntakePage: React.FC = () => {
         </div>
 
         <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2 mr-4">
+            {autoSaveStatus === 'saving' && <Loader2 size={14} className="text-white/50 animate-spin" />}
+            <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">
+              {autoSaveStatus === 'saving' ? 'Saving...' : autoSaveStatus === 'saved' ? 'Saved' : 'Auto-save'}
+            </span>
+          </div>
           <button className="text-white/70 hover:text-white">
             <Bell size={20} />
           </button>
@@ -158,25 +229,25 @@ const GuidedIntakePage: React.FC = () => {
 
                     <div className="relative">
                       <textarea 
-                        value={storyText}
-                        onChange={(e) => setStoryText(e.target.value)}
+                        value={screen1WorkflowStory}
+                        onChange={handleTextChange}
                         placeholder="Example: A patient calls to book an appointment. The receptionist takes their details and checks the calendar..."
                         className="w-full min-h-[320px] bg-slate-50/50 border border-slate-200 rounded-2xl p-6 text-slate-700 font-inter focus:outline-none focus:ring-2 focus:ring-[#0F766E]/20 focus:border-[#0F766E] transition-all resize-none leading-relaxed"
                       />
                       
                       <div className="mt-4 flex items-center justify-between">
                         <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                          {storyText.length} / {minCharsStory} minimum characters
+                          {screen1WorkflowStory.length} / {minChars[1]} minimum characters
                         </div>
                         <div className="text-xs font-bold text-[#0F766E] uppercase tracking-widest">
-                          {storyProgress}% Complete
+                          {progress}% Complete
                         </div>
                       </div>
                       <div className="h-1.5 w-full bg-slate-100 rounded-full mt-2 overflow-hidden">
                         <motion.div 
                           className="h-full bg-[#0F766E]"
                           initial={{ width: 0 }}
-                          animate={{ width: `${storyProgress}%` }}
+                          animate={{ width: `${progress}%` }}
                         />
                       </div>
                     </div>
@@ -220,25 +291,25 @@ const GuidedIntakePage: React.FC = () => {
 
                     <div className="relative">
                       <textarea 
-                        value={rolesText}
-                        onChange={(e) => setRolesText(e.target.value)}
+                        value={screen2PeopleRoles}
+                        onChange={handleTextChange}
                         placeholder="Example: Our receptionist handles booking and initial intake. Then, the doctor reviews the history and the manager approves the insurance claim..."
                         className="w-full min-h-[240px] bg-slate-50/50 border border-slate-200 rounded-2xl p-6 text-slate-700 font-inter focus:outline-none focus:ring-2 focus:ring-[#0F766E]/20 focus:border-[#0F766E] transition-all resize-none leading-relaxed"
                       />
                       
                       <div className="mt-4 flex items-center justify-between">
                         <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                          {rolesText.length} / {minCharsRoles} minimum characters
+                          {screen2PeopleRoles.length} / {minChars[2]} minimum characters
                         </div>
                         <div className="text-xs font-bold text-[#0F766E] uppercase tracking-widest">
-                          {rolesProgress}% Complete
+                          {progress}% Complete
                         </div>
                       </div>
                       <div className="h-1.5 w-full bg-slate-100 rounded-full mt-2 overflow-hidden">
                         <motion.div 
                           className="h-full bg-[#0F766E]"
                           initial={{ width: 0 }}
-                          animate={{ width: `${rolesProgress}%` }}
+                          animate={{ width: `${progress}%` }}
                         />
                       </div>
                     </div>
@@ -267,18 +338,6 @@ const GuidedIntakePage: React.FC = () => {
                         <button className="px-4 py-2 border-2 border-dashed border-slate-200 rounded-full text-sm font-bold text-slate-400 hover:border-[#0F766E] hover:text-[#0F766E] transition-all">
                           + Add a role manually
                         </button>
-                      </div>
-                    </div>
-
-                    {/* Suggestions */}
-                    <div className="mt-8">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Common Suggestions</p>
-                      <div className="flex flex-wrap gap-2">
-                        {['Receptionist 📋', 'Doctor 👨‍⚕️', 'Nurse ✏️', 'Manager 📋', 'Cashier 💰'].map((s, i) => (
-                          <button key={i} className="px-3 py-1.5 bg-slate-50 border border-slate-100 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors">
-                            {s}
-                          </button>
-                        ))}
                       </div>
                     </div>
                   </motion.div>
@@ -416,13 +475,13 @@ const GuidedIntakePage: React.FC = () => {
 
                     <div className="relative">
                       <textarea 
-                        value={rulesText}
-                        onChange={(e) => setRulesText(e.target.value)}
+                        value={screen4RulesExceptions}
+                        onChange={handleTextChange}
                         placeholder="e.g. Patients with an unpaid balance over $50 cannot book new appointments unless it's an emergency. All new patients must receive a follow-up call within 3 days of their first visit..."
                         className="w-full min-h-[180px] bg-slate-50/50 border border-slate-200 rounded-2xl p-6 text-slate-700 font-inter focus:outline-none focus:ring-2 focus:ring-[#0F766E]/20 focus:border-[#0F766E] transition-all resize-none leading-relaxed"
                       />
                       
-                      {rulesText.length > 20 && (
+                      {screen4RulesExceptions.length > 20 && (
                         <div className="absolute bottom-4 right-4 bg-teal-100 text-[#0F766E] text-xs font-bold px-2 py-1 rounded flex items-center space-x-1">
                           <CheckCircle2 size={14} />
                           <span>READY</span>
@@ -531,7 +590,7 @@ const GuidedIntakePage: React.FC = () => {
                 <div className="flex items-center justify-between py-6">
                   {currentStep > 1 ? (
                     <button 
-                      onClick={() => setCurrentStep(prev => prev - 1)}
+                      onClick={() => setCurrentStep((currentStep - 1) as 1|2|3|4)}
                       className="text-sm font-bold text-slate-500 hover:text-slate-800 transition-colors flex items-center"
                     >
                       ← Back
@@ -545,8 +604,7 @@ const GuidedIntakePage: React.FC = () => {
                   
                   <Button 
                     onClick={handleNext}
-                    disabled={currentStep === 1 ? storyText.length < minCharsStory : currentStep === 2 ? rolesText.length < minCharsRoles : false}
-                    className="h-14 px-10 rounded-2xl bg-[#0F766E] hover:bg-[#0D6B63] text-white font-bold flex items-center space-x-3 shadow-xl shadow-teal-900/10 transition-all active:scale-95 disabled:opacity-30 disabled:grayscale"
+                    className="h-14 px-10 rounded-2xl bg-[#0F766E] hover:bg-[#0D6B63] text-white font-bold flex items-center space-x-3 shadow-xl shadow-teal-900/10 transition-all active:scale-95"
                   >
                     <span>
                       {currentStep === 1 && 'Next: People & Roles'}

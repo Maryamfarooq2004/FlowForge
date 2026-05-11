@@ -1,0 +1,29 @@
+﻿
+> flowforge-frontend@0.0.0 build
+> tsc -b && vite build
+
+src/app/providers.tsx(12,8): error TS2591: Cannot find name 'process'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node` and then add 'node' to the types field in your tsconfig.
+src/app/router.tsx(5,10): error TS2614: Module '"../components/shared/LoadingScreen"' has no exported member 'LoadingScreen'. Did you mean to use 'import LoadingScreen from "../components/shared/LoadingScreen"' instead?
+src/app/router.tsx(39,10): error TS2741: Property 'children' is missing in type '{}' but required in type 'AppShellProps'.
+src/components/admin/AdminLayout.tsx(20,15): error TS2322: Type '{ currentSection: string | undefined; isAdmin: boolean; }' is not assignable to type 'IntrinsicAttributes'.
+  Property 'currentSection' does not exist on type 'IntrinsicAttributes'.
+src/components/auth/ProtectedRoute.tsx(36,13): error TS2339: Property 'role' does not exist on type 'User'.
+src/components/features/intake/CloseEndedForm.tsx(142,10): error TS2552: Cannot find name 'motion'. Did you mean 'Option'?
+src/components/layout/AppShell.tsx(25,15): error TS2322: Type '{ projectName: string | undefined; currentSection: string | undefined; }' is not assignable to type 'IntrinsicAttributes'.
+  Property 'projectName' does not exist on type 'IntrinsicAttributes'.
+src/hooks/useProjects.ts(5,3): error TS1484: 'UseQueryResult' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
+src/lib/axios.ts(2,3): error TS1484: 'AxiosInstance' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
+src/lib/axios.ts(3,3): error TS1484: 'InternalAxiosRequestConfig' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
+src/lib/axios.ts(4,3): error TS1484: 'AxiosResponse' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
+src/pages/auth/LoginPage.tsx(27,11): error TS2339: Property 'login' does not exist on type 'AuthState'.
+src/pages/auth/LoginPage.tsx(62,15): error TS2339: Property 'user' does not exist on type 'AuthResponse | undefined'.
+src/pages/auth/LoginPage.tsx(62,21): error TS2339: Property 'accessToken' does not exist on type 'AuthResponse | undefined'.
+src/pages/auth/RegisterPage.tsx(18,23): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(values: readonly ["clinic", "school"], params?: string | { error?: string | $ZodErrorMap<$ZodIssueInvalidValue<unknown>> | undefined; message?: string | undefined; } | undefined): ZodEnum<...>', gave the following error.
+    Object literal may only specify known properties, and 'required_error' does not exist in type '{ error?: string | $ZodErrorMap<$ZodIssueInvalidValue<unknown>> | undefined; message?: string | undefined; }'.
+  Overload 2 of 2, '(entries: Readonly<Record<string, EnumValue>>, params?: string | { error?: string | $ZodErrorMap<$ZodIssueInvalidValue<unknown>> | undefined; message?: string | undefined; } | undefined): ZodEnum<...>', gave the following error.
+    Argument of type 'string[]' is not assignable to parameter of type 'Readonly<Record<string, EnumValue>>'.
+      Index signature for type 'string' is missing in type 'string[]'.
+src/pages/auth/RegisterPage.tsx(64,51): error TS2345: Argument of type '{ fullName: string; email: string; organizationType: "clinic" | "school"; password: string; }' is not assignable to parameter of type 'RegisterDto'.
+  Property 'orgType' is missing in type '{ fullName: string; email: string; organizationType: "clinic" | "school"; password: string; }' but required in type 'RegisterDto'.
+src/pages/intake/IntakeFormPage.tsx(14,35): error TS2339: Property 'getById' does not exist on type '{ getProjects: (params?: { status?: string | undefined; domain?: string | undefined; page?: number | undefined; limit?: number | undefined; } | undefined) => Promise<AxiosResponse<ApiResponse<PaginatedResponse<Project>>, any, {}>>; ... 7 more ...; getArchivedProjects: () => Promise<...>; }'.

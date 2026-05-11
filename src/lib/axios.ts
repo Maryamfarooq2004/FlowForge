@@ -1,48 +1,64 @@
-import axios, {
+import axios from 'axios';
+import type {
   AxiosInstance,
   InternalAxiosRequestConfig,
   AxiosResponse,
   AxiosError,
 } from 'axios';
 import { useAuthStore } from '../store/authStore';
+import { queryClient } from './queryClient';
 
+// Hardcoded Railway URL — never use env variable for this
+// to avoid Vercel build-time substitution issues
 const BASE_URL = 'https://flowforge-production-0fc1.up.railway.app';
 
 export const axiosInstance: AxiosInstance = axios.create({
   baseURL: `${BASE_URL}/api/v1`,
-  withCredentials: true,  // CRITICAL — sends httpOnly cookies cross-domain
-  timeout: 30000,         // 30s timeout (Railway can be slow to wake up)
+  withCredentials: true,   // CRITICAL: sends httpOnly refresh cookie cross-domain
+  timeout: 30000,          // Railway cold start can take up to 15s
   headers: {
     'Content-Type': 'application/json',
-    'Accept': 'application/json',
+    Accept: 'application/json',
   },
 });
 
-// Request interceptor — attach access token
+// ── REQUEST INTERCEPTOR ────────────────────────────────────────
+
 axiosInstance.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const token = useAuthStore.getState().accessToken;
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    // Debug logging in development
+    if (import.meta.env.DEV) {
+      console.log(`[API] ${config.method?.toUpperCase()} ${config.url}`);
+    }
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => {
+    console.error('[API] Request error:', error);
+    return Promise.reject(error);
+  }
 );
 
-// Response interceptor — handle 401 with token refresh
+// ── RESPONSE INTERCEPTOR — TOKEN REFRESH QUEUE ────────────────
+
 let isRefreshing = false;
-let refreshQueue: Array<{
+let failedRequestsQueue: Array<{
   resolve: (token: string) => void;
-  reject: (err: unknown) => void;
+  reject: (error: unknown) => void;
 }> = [];
 
 const processQueue = (error: unknown, token: string | null = null) => {
-  refreshQueue.forEach(({ resolve, reject }) => {
-    if (error) reject(error);
-    else if (token) resolve(token);
+  failedRequestsQueue.forEach(({ resolve, reject }) => {
+    if (error) {
+      reject(error);
+    } else if (token) {
+      resolve(token);
+    }
   });
-  refreshQueue = [];
+  failedRequestsQueue = [];
 };
 
 axiosInstance.interceptors.response.use(
@@ -52,23 +68,41 @@ axiosInstance.interceptors.response.use(
       _retry?: boolean;
     };
 
+    // Network error — no response from Railway
+    if (!error.response) {
+      console.error('[API] Network error — Railway unreachable:', error.message);
+      return Promise.reject({
+        response: {
+          data: {
+            success: false,
+            code: 'NETWORK_ERROR',
+            message: 'Cannot connect to server. Please check your connection.',
+          },
+        },
+      });
+    }
+
+    const status = error.response.status;
+
     // Handle 401 — attempt silent token refresh
     if (
-      error.response?.status === 401 &&
+      status === 401 &&
       !originalRequest._retry &&
       !originalRequest.url?.includes('/auth/refresh-token') &&
-      !originalRequest.url?.includes('/auth/login')
+      !originalRequest.url?.includes('/auth/login') &&
+      !originalRequest.url?.includes('/auth/register')
     ) {
       if (isRefreshing) {
-        // Queue requests while refresh is in progress
         return new Promise((resolve, reject) => {
-          refreshQueue.push({ resolve, reject });
-        }).then((token) => {
-          if (originalRequest.headers) {
-            originalRequest.headers.Authorization = `Bearer ${token}`;
-          }
-          return axiosInstance(originalRequest);
-        });
+          failedRequestsQueue.push({ resolve, reject });
+        })
+          .then((newToken) => {
+            if (originalRequest.headers) {
+              originalRequest.headers.Authorization = `Bearer ${newToken}`;
+            }
+            return axiosInstance(originalRequest);
+          })
+          .catch((err) => Promise.reject(err));
       }
 
       originalRequest._retry = true;
@@ -87,15 +121,25 @@ axiosInstance.interceptors.response.use(
         return axiosInstance(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError, null);
+        // Clear everything
         useAuthStore.getState().clearAuth();
-        // Only redirect if not already on auth pages
+        queryClient.clear();
+        // Redirect to login only if not already there
         if (!window.location.pathname.startsWith('/login')) {
-          window.location.href = '/login';
+          window.location.replace('/login');
         }
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
       }
+    }
+
+    // Log all other errors
+    if (import.meta.env.DEV) {
+      console.error(
+        `[API] Error ${status}:`,
+        error.response?.data
+      );
     }
 
     return Promise.reject(error);

@@ -1,32 +1,29 @@
 import axiosInstance from '../lib/axios';
-
-export interface RegisterDto {
-  fullName: string;
-  email: string;
-  organizationType: 'clinic' | 'school';
-  password: string;
-}
-
-export interface LoginDto {
-  email: string;
-  password: string;
-}
+import type { RegisterDto, LoginDto, AuthResponse } from '../types/auth.types';
+import type { ApiResponse } from '../types/api.types';
+import type { User } from '../types/auth.types';
 
 const authService = {
   register: (data: RegisterDto) =>
-    axiosInstance.post('/auth/register', data),
+    axiosInstance.post<ApiResponse<AuthResponse>>('/auth/register', data),
 
   login: (data: LoginDto) =>
-    axiosInstance.post('/auth/login', data),
+    axiosInstance.post<ApiResponse<AuthResponse>>('/auth/login', data),
 
   logout: () =>
-    axiosInstance.post('/auth/logout'),
+    axiosInstance.post<ApiResponse<null>>('/auth/logout'),
 
   refreshToken: () =>
-    axiosInstance.post('/auth/refresh-token'),
+    axiosInstance.post<ApiResponse<AuthResponse>>('/auth/refresh-token'),
 
   getMe: () =>
-    axiosInstance.get('/auth/me'),
+    axiosInstance.get<ApiResponse<{ user: User }>>('/auth/me'),
+
+  updateProfile: (data: Partial<Pick<User, 'fullName' | 'businessName' | 'logoUrl'>>) =>
+    axiosInstance.patch<ApiResponse<{ user: User }>>('/auth/profile', data),
+
+  changePassword: (data: { currentPassword: string; newPassword: string }) =>
+    axiosInstance.patch<ApiResponse<null>>('/auth/change-password', data),
 };
 
 export default authService;

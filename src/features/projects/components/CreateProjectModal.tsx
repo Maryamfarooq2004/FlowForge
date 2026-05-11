@@ -1,177 +1,234 @@
-import React from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { Sparkles, Building2, School, CheckCircle2, ArrowRight } from 'lucide-react';
-import { Modal } from '../../../components/ui/Modal';
-import { Input } from '../../../components/ui/Input';
-import { Button } from '../../../components/ui/Button';
-import { cn } from '../../../utils/classNames';
+import { X, Stethoscope, GraduationCap, Sparkles } from 'lucide-react';
+import { useCreateProject } from '../../../hooks/useProjects';
+import type { ProjectDomain } from '../../../types/project.types';
 
-const createProjectSchema = z.object({
-  name: z.string()
-    .min(1, 'Project name is required')
-    .max(50, 'Max 50 characters'),
-  domain: z.enum(['clinic', 'school']),
-});
-
-type CreateProjectFormValues = z.infer<typeof createProjectSchema>;
-
-interface CreateProjectModalProps {
+interface Props {
   isOpen: boolean;
   onClose: () => void;
 }
 
-export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, onClose }) => {
+export const CreateProjectModal = ({ isOpen, onClose }: Props) => {
   const navigate = useNavigate();
+  const [name, setName] = useState('');
+  const [domain, setDomain] = useState<ProjectDomain | null>(null);
+  const [nameError, setNameError] = useState('');
 
-  const {
-    register,
-    handleSubmit,
-    setValue,
-    watch,
-    formState: { errors, isSubmitting },
-    reset
-  } = useForm<CreateProjectFormValues>({
-    resolver: zodResolver(createProjectSchema),
-    defaultValues: {
-      name: '',
-      domain: undefined,
+  const { mutate: createProject, isPending } = useCreateProject();
+
+  const handleSubmit = () => {
+    // Validate
+    if (!name.trim()) {
+      setNameError('Project name is required.');
+      return;
     }
-  });
+    if (name.trim().length < 3) {
+      setNameError('Project name must be at least 3 characters.');
+      return;
+    }
+    if (!domain) {
+      return; // Button is disabled anyway
+    }
 
-  const selectedDomain = watch('domain');
-  const projectName = watch('name');
+    setNameError('');
+
+    // Create project in MongoDB via React Query mutation
+    createProject(
+      { name: name.trim(), domain },
+      {
+        onSuccess: (response) => {
+          const projectId = response.data.data?.project?.id ||
+                            response.data.data?.project?._id;
+          onClose();
+          setName('');
+          setDomain(null);
+          // Navigate to intake form for new project
+          navigate(`/project/${projectId}/intake/form`);
+        },
+        onError: (err: any) => {
+          const code = err.response?.data?.code;
+          if (code === 'DUPLICATE_NAME') {
+            setNameError('You already have a project with this name.');
+          }
+        },
+      }
+    );
+  };
 
   const handleClose = () => {
-    reset();
+    if (isPending) return; // Prevent closing during submission
+    setName('');
+    setDomain(null);
+    setNameError('');
     onClose();
   };
 
-  const onSubmit = async (data: CreateProjectFormValues) => {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    console.log('Project created:', data);
-    handleClose();
-    navigate('/project/new/domain');
-  };
+  if (!isOpen) return null;
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} className="max-w-[520px] p-0 overflow-visible">
-      <div className="p-8">
-        <div className="flex items-center space-x-3 mb-6">
-          <div className="bg-teal-50 rounded-xl p-2 text-[#0F766E]">
-            <Sparkles size={24} />
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Overlay */}
+      <div
+        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+        onClick={handleClose}
+      />
+
+      {/* Modal */}
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-[520px] 
+                      p-8 z-10 animate-in fade-in zoom-in-95 duration-200">
+        {/* Close */}
+        <button
+          onClick={handleClose}
+          disabled={isPending}
+          className="absolute top-4 right-4 p-2 rounded-lg text-slate-400 
+                     hover:text-slate-600 hover:bg-slate-100 transition-colors"
+        >
+          <X className="w-5 h-5" />
+        </button>
+
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-6">
+          <div className="bg-teal-50 rounded-xl p-2.5">
+            <Sparkles className="w-5 h-5 text-[#0F766E]" />
           </div>
           <div>
-            <h3 className="text-2xl font-bold text-slate-900 font-poppins">Start a New Project</h3>
-            <p className="text-sm text-slate-500">Give your project a name, then choose your business type.</p>
+            <h2 className="text-xl font-bold text-slate-900 font-poppins">
+              Start a New Project
+            </h2>
+            <p className="text-sm text-slate-500">
+              Give it a name and choose your business type.
+            </p>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-          <div className="space-y-1">
-            <Input
-              label="Project Name"
+        {/* Project Name */}
+        <div className="mb-5">
+          <label className="block text-xs font-semibold uppercase tracking-wide 
+                            text-slate-600 mb-1.5">
+            Project Name
+          </label>
+          <div className="relative">
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value.slice(0, 50));
+                if (nameError) setNameError('');
+              }}
+              onKeyDown={(e) => e.key === 'Enter' && domain && handleSubmit()}
               placeholder="e.g. Al-Shifa Clinic App"
-              {...register('name')}
-              variant={errors.name ? 'error' : 'default'}
-              errorMessage={errors.name?.message}
+              className={`w-full h-11 px-4 rounded-xl border text-sm text-slate-800
+                         placeholder:text-slate-400 outline-none transition-all
+                         ${nameError
+                           ? 'border-red-400 ring-2 ring-red-100'
+                           : 'border-slate-200 focus:border-[#0F766E] focus:ring-2 focus:ring-teal-100'
+                         }`}
             />
-            <div className="flex justify-end">
-              <span className={cn(
-                "text-[10px] font-bold tracking-widest uppercase",
-                projectName?.length > 45 ? "text-red-500" : "text-slate-300"
-              )}>
-                {projectName?.length || 0} / 50
-              </span>
-            </div>
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 
+                             text-xs text-slate-400">
+              {name.length}/50
+            </span>
           </div>
+          {nameError && (
+            <p className="text-xs text-red-600 mt-1.5 flex items-center gap-1">
+              <span>⚠</span> {nameError}
+            </p>
+          )}
+        </div>
 
-          <div className="space-y-3">
-            <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">Business Type</label>
-            <div className="grid grid-cols-2 gap-4">
-              <button
-                type="button"
-                onClick={() => setValue('domain', 'clinic', { shouldValidate: true })}
-                className={cn(
-                  "relative p-4 rounded-xl border-2 text-left transition-all duration-200 group",
-                  selectedDomain === 'clinic' 
-                    ? "border-[#0F766E] bg-teal-50 shadow-sm shadow-teal-700/5" 
-                    : "border-slate-200 bg-white hover:border-slate-300"
-                )}
-              >
-                <div className={cn(
-                  "p-2 rounded-lg w-fit mb-4 transition-colors",
-                  selectedDomain === 'clinic' ? "bg-[#0F766E] text-white" : "bg-teal-50 text-[#0F766E]"
-                )}>
-                  <Building2 size={20} />
-                </div>
-                <h4 className="font-bold text-slate-900 text-sm">Clinic</h4>
-                <p className="text-[11px] text-slate-500 leading-tight">Appointments & patient management</p>
-                
-                {selectedDomain === 'clinic' && (
-                  <div className="absolute top-2 right-2 text-[#0F766E]">
-                    <CheckCircle2 size={16} fill="currentColor" className="text-white" />
-                  </div>
-                )}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setValue('domain', 'school', { shouldValidate: true })}
-                className={cn(
-                  "relative p-4 rounded-xl border-2 text-left transition-all duration-200 group",
-                  selectedDomain === 'school' 
-                    ? "border-[#4F46E5] bg-indigo-50 shadow-sm shadow-indigo-700/5" 
-                    : "border-slate-200 bg-white hover:border-slate-300"
-                )}
-              >
-                <div className={cn(
-                  "p-2 rounded-lg w-fit mb-4 transition-colors",
-                  selectedDomain === 'school' ? "bg-[#4F46E5] text-white" : "bg-indigo-50 text-[#4F46E5]"
-                )}>
-                  <School size={20} />
-                </div>
-                <h4 className="font-bold text-slate-900 text-sm">School</h4>
-                <p className="text-[11px] text-slate-500 leading-tight">Admissions & enrollment management</p>
-                
-                {selectedDomain === 'school' && (
-                  <div className="absolute top-2 right-2 text-[#4F46E5]">
-                    <CheckCircle2 size={16} fill="currentColor" className="text-white" />
-                  </div>
-                )}
-              </button>
-            </div>
-            {errors.domain && (
-              <p className="text-xs text-red-500 mt-2 font-medium">{errors.domain.message}</p>
-            )}
-          </div>
-
-          <div className="mt-10 flex items-center justify-between border-t border-slate-100 pt-6">
-            <button type="button" onClick={handleClose} className="text-sm font-bold text-slate-400 hover:text-slate-600 transition-colors">
-              Cancel
-            </button>
-            <Button 
-              type="submit"
-              isLoading={isSubmitting}
-              className="px-8 shadow-lg shadow-teal-700/20"
+        {/* Business Type */}
+        <div className="mb-6">
+          <label className="block text-xs font-semibold uppercase tracking-wide 
+                            text-slate-600 mb-2">
+            Business Type
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            {/* Clinic */}
+            <button
+              type="button"
+              onClick={() => setDomain('clinic')}
+              className={`relative p-4 rounded-xl border-2 text-left transition-all
+                ${domain === 'clinic'
+                  ? 'border-[#0F766E] bg-teal-50 shadow-sm'
+                  : 'border-slate-200 hover:border-slate-300 bg-white'
+                }`}
             >
-              Create Project <ArrowRight size={18} className="ml-2" />
-            </Button>
-          </div>
-        </form>
+              {domain === 'clinic' && (
+                <span className="absolute top-2 right-2 w-5 h-5 bg-[#0F766E] 
+                                 rounded-full flex items-center justify-center">
+                  <span className="text-white text-xs">✓</span>
+                </span>
+              )}
+              <div className="bg-teal-100 rounded-lg p-2 w-10 h-10 
+                              flex items-center justify-center mb-3">
+                <Stethoscope className="w-5 h-5 text-teal-700" />
+              </div>
+              <p className="font-semibold text-slate-800 text-sm">Clinic</p>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Appointments & patient management
+              </p>
+            </button>
 
-        <div className="mt-8 text-center">
-          <p className="text-[10px] font-bold text-slate-300 tracking-[0.2em] uppercase">FlowForge Shell v2.4</p>
-          <div className="flex items-center justify-center space-x-4 mt-2">
-            <button className="text-[10px] text-slate-300 hover:text-slate-400 font-medium">Privacy Policy</button>
-            <button className="text-[10px] text-slate-300 hover:text-slate-400 font-medium">Terms of Service</button>
-            <button className="text-[10px] text-slate-300 hover:text-slate-400 font-medium">Help Center</button>
+            {/* School */}
+            <button
+              type="button"
+              onClick={() => setDomain('school')}
+              className={`relative p-4 rounded-xl border-2 text-left transition-all
+                ${domain === 'school'
+                  ? 'border-[#4F46E5] bg-indigo-50 shadow-sm'
+                  : 'border-slate-200 hover:border-slate-300 bg-white'
+                }`}
+            >
+              {domain === 'school' && (
+                <span className="absolute top-2 right-2 w-5 h-5 bg-[#4F46E5] 
+                                 rounded-full flex items-center justify-center">
+                  <span className="text-white text-xs">✓</span>
+                </span>
+              )}
+              <div className="bg-indigo-100 rounded-lg p-2 w-10 h-10 
+                              flex items-center justify-center mb-3">
+                <GraduationCap className="w-5 h-5 text-indigo-700" />
+              </div>
+              <p className="font-semibold text-slate-800 text-sm">School</p>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Admissions & enrollment
+              </p>
+            </button>
           </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between">
+          <button
+            onClick={handleClose}
+            disabled={isPending}
+            className="px-5 py-2.5 text-sm font-medium text-slate-600 
+                       border border-slate-200 rounded-xl hover:bg-slate-50 
+                       transition-colors disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={!name.trim() || !domain || isPending || name.trim().length < 3}
+            className="flex items-center gap-2 bg-[#0F766E] hover:bg-[#0D6B63] 
+                       disabled:bg-slate-300 disabled:cursor-not-allowed
+                       text-white px-6 py-2.5 rounded-xl text-sm font-semibold 
+                       transition-colors min-w-[140px] justify-center"
+          >
+            {isPending ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent 
+                                rounded-full animate-spin" />
+                Creating...
+              </>
+            ) : (
+              'Create Project →'
+            )}
+          </button>
         </div>
       </div>
-    </Modal>
+    </div>
   );
 };

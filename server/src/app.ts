@@ -8,7 +8,7 @@ import mongoose from 'mongoose';
 import authRoutes from './routes/auth.routes';
 import adminRoutes from './routes/admin.routes';
 import intakeRoutes from './routes/intake.routes';
-
+import projectRoutes from './routes/project.routes';
 export const createApp = (): Application => {
   const app = express();
 
@@ -94,7 +94,7 @@ export const createApp = (): Application => {
   app.use('/api/v1/auth', authRoutes);
   app.use('/api/v1/admin', adminRoutes);
   app.use('/api/v1/intake', intakeRoutes);
-
+  app.use('/api/v1/projects', projectRoutes);
   // ── STEP 10: 404 handler
   app.use((req, res) => {
     res.status(404).json({

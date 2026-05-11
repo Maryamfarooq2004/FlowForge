@@ -9,19 +9,31 @@ import { Skeleton } from '../../components/ui/Skeleton';
 const IntakeFormPage: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
 
+  // Fetch Project to get domain/category
   const { data: project, isLoading: isProjectLoading, error: projectError } = useQuery({
     queryKey: ['project', projectId],
-    queryFn: () => projectService.getById(projectId!),
+    queryFn: async () => {
+      const res = await projectService.getProject(projectId!);
+      return res.data.data?.project;
+    },
     enabled: !!projectId,
   });
 
-  const { data: questions, isLoading: isQuestionsLoading, error: questionsError } = useQuery({
-    queryKey: ['intakeQuestions', project?.category],
-    queryFn: () => intakeService.getQuestions(project!.category as 'clinic' | 'school'),
-    enabled: !!project?.category,
+  // Fetch Intake Bundle to get existing form data
+  const { data: bundle, isLoading: isBundleLoading } = useQuery({
+    queryKey: ['intakeBundle', projectId],
+    queryFn: () => intakeService.getIntake(projectId!),
+    enabled: !!projectId,
   });
 
-  if (isProjectLoading || isQuestionsLoading) {
+  // Fetch Questions based on domain
+  const { data: questions, isLoading: isQuestionsLoading, error: questionsError } = useQuery({
+    queryKey: ['intakeQuestions', project?.domain],
+    queryFn: () => intakeService.getQuestions(project!.domain as 'clinic' | 'school'),
+    enabled: !!project?.domain,
+  });
+
+  if (isProjectLoading || isQuestionsLoading || isBundleLoading) {
     return (
       <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6">
         <Skeleton className="h-8 w-64 mb-4" />
@@ -37,9 +49,9 @@ const IntakeFormPage: React.FC = () => {
   return (
     <CloseEndedForm 
       projectId={project._id}
-      category={project.category}
+      category={project.domain as 'clinic' | 'school'}
       questions={questions}
-      initialValues={project.intakeData || {}}
+      initialValues={bundle?.structuredForm || {}}
     />
   );
 };

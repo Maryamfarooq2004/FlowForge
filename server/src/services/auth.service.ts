@@ -17,10 +17,12 @@ const sanitizeUser = (user: IUser) => ({
   id: user._id.toString(),
   fullName: user.fullName,
   email: user.email,
-  organizationType: user.organizationType,
+  orgType: user.organizationType,
   businessName: user.businessName,
   logoUrl: user.logoUrl,
   createdAt: user.createdAt,
+  updatedAt: user.updatedAt,
+  role: user.role,
 });
 
 // Helper: hash a refresh token for storage

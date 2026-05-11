@@ -1,158 +1,193 @@
-import React, { useState } from 'react';
-import { Plus, Search, FolderOpen } from 'lucide-react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { AppShell } from '../../components/layout/AppShell';
-import { Button } from '../../components/ui/Button';
-import { ProjectCard } from '../../features/projects/components/ProjectCard';
-import { CreateProjectModal } from '../../features/projects/components/CreateProjectModal';
-import { Skeleton } from '../../components/ui/Skeleton';
-import { OnboardingEmpty } from '../../components/shared/OnboardingEmpty';
-import projectService from '../../services/projectService';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, FolderOpen } from 'lucide-react';
+import { useProjects, useArchiveProject, useDeleteProject, useDuplicateProject } from '../../hooks/useProjects';
 import { useAuthStore } from '../../store/authStore';
-import { toast } from 'react-hot-toast';
-import { cn } from '../../utils/classNames';
-import type { ProjectStatus } from '../../components/ui/StatusBadge';
+import { CreateProjectModal } from '../../features/projects/components/CreateProjectModal';
+import { ProjectCard } from '../../features/projects/components/ProjectCard';
+import { ProjectCardSkeleton } from '../../features/projects/components/ProjectCardSkeleton';
+import type { Project } from '../../types/project.types';
 
-const ProjectHubPage: React.FC = () => {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'all' | 'archived'>('all');
+export default function ProjectHubPage() {
+  const navigate = useNavigate();
   const { user } = useAuthStore();
-  const queryClient = useQueryClient();
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [activeTab, setActiveTab] = useState<'all' | 'archived'>('all');
 
-  const { data: projects, isLoading } = useQuery({
-    queryKey: ['projects', activeTab],
-    queryFn: () => activeTab === 'all' ? projectService.getAll() : projectService.getArchived(),
-    staleTime: 30 * 1000,
-  });
+  // ── FETCH DATA FROM MONGODB VIA REACT QUERY ──────────────
+  const {
+    data,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useProjects();
 
-  const archiveMutation = useMutation({
-    mutationFn: (id: string) => projectService.archive(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['projects'] });
-      toast.success('Project archived successfully');
-    },
-  });
+  const projects = data?.projects ?? [];
 
-  const duplicateMutation = useMutation({
-    mutationFn: (id: string) => projectService.duplicate(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['projects'] });
-      toast.success('Project duplicated successfully');
-    },
-  });
+  const { mutate: archiveProject } = useArchiveProject();
+  const { mutate: deleteProject } = useDeleteProject();
+  const { mutate: duplicateProject } = useDuplicateProject();
 
-  const hasNoProjects = !isLoading && (!projects || projects.length === 0) && activeTab === 'all';
+  const handleOpenProject = (project: Project) => {
+    navigate(`/project/${project.id || project._id}/intake/form`);
+  };
 
-  return (
-    <AppShell>
-      <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900 font-poppins mb-1">
-            {hasNoProjects ? 'Welcome to FlowForge' : 'My Projects'}
-          </h1>
-          <p className="text-sm text-slate-500 font-medium mb-4">
-            {hasNoProjects 
-              ? `Let's build your first ${user?.organizationType === 'clinic' ? 'medical' : 'educational'} application.` 
-              : `Welcome back, ${user?.fullName?.split(' ')[0]}. Manage your flow generation projects.`}
-          </p>
-          
-          {!hasNoProjects && (
-            <div className="flex space-x-6">
-              <button 
-                onClick={() => setActiveTab('all')}
-                className={cn(
-                  "pb-2 text-sm font-bold transition-all border-b-2",
-                  activeTab === 'all' 
-                  ? "text-[#0F766E] border-[#0F766E]" 
-                  : "text-slate-400 border-transparent hover:text-slate-600"
-                )}
-              >
-                All Projects
-              </button>
-              <button 
-                onClick={() => setActiveTab('archived')}
-                className={cn(
-                  "pb-2 text-sm font-bold transition-all border-b-2",
-                  activeTab === 'archived' 
-                  ? "text-[#0F766E] border-[#0F766E]" 
-                  : "text-slate-400 border-transparent hover:text-slate-600"
-                )}
-              >
-                Archived
-              </button>
-            </div>
-          )}
-        </div>
-
-        {!hasNoProjects && (
-          <div className="flex items-center space-x-3">
-            <div className="relative">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-              <input 
-                type="text" 
-                placeholder="Search projects..." 
-                className="pl-9 pr-4 h-9 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0F766E]/20 focus:border-[#0F766E] transition-all w-64"
-              />
-            </div>
-            <Button onClick={() => setIsModalOpen(true)} className="h-9 px-4">
-              <Plus size={18} className="mr-2" /> New Project
-            </Button>
+  // ── LOADING STATE ─────────────────────────────────────────
+  if (isLoading) {
+    return (
+      <div className="p-8">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <div className="h-8 w-48 bg-slate-200 rounded-lg animate-pulse" />
+            <div className="h-4 w-64 bg-slate-100 rounded-lg animate-pulse mt-2" />
           </div>
+          <div className="h-10 w-36 bg-slate-200 rounded-lg animate-pulse" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <ProjectCardSkeleton key={i} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // ── ERROR STATE ───────────────────────────────────────────
+  if (isError) {
+    const errMsg = (error as any)?.response?.data?.message || 'Failed to load projects.';
+    return (
+      <div className="p-8 flex flex-col items-center justify-center min-h-[60vh]">
+        <div className="bg-white rounded-2xl border border-red-100 p-10 text-center max-w-md">
+          <div className="w-16 h-16 bg-red-50 rounded-full flex items-center 
+                          justify-center mx-auto mb-4">
+            <span className="text-3xl">⚠️</span>
+          </div>
+          <h3 className="text-lg font-semibold text-slate-800 mb-2">
+            Failed to Load Projects
+          </h3>
+          <p className="text-sm text-slate-500 mb-6">{errMsg}</p>
+          <button
+            onClick={() => refetch()}
+            className="bg-[#0F766E] text-white px-6 py-2.5 rounded-lg 
+                       text-sm font-medium hover:bg-[#0D6B63] transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── EMPTY STATE ───────────────────────────────────────────
+  const EmptyState = () => (
+    <div className="col-span-full flex flex-col items-center justify-center 
+                    py-20 text-center">
+      <div className="w-20 h-20 bg-teal-50 rounded-2xl flex items-center 
+                      justify-center mb-4">
+        <FolderOpen className="w-10 h-10 text-[#0F766E]" />
+      </div>
+      <h3 className="text-lg font-semibold text-slate-800 mb-2">
+        No projects yet
+      </h3>
+      <p className="text-sm text-slate-500 mb-6 max-w-xs">
+        Create your first project to start generating your business application.
+      </p>
+      <button
+        onClick={() => setShowCreateModal(true)}
+        className="bg-[#0F766E] text-white px-6 py-2.5 rounded-lg 
+                   text-sm font-semibold hover:bg-[#0D6B63] transition-colors
+                   flex items-center gap-2"
+      >
+        <Plus className="w-4 h-4" />
+        Create First Project
+      </button>
+    </div>
+  );
+
+  // ── LOADED STATE ──────────────────────────────────────────
+  return (
+    <div className="p-8">
+      {/* Page Header */}
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 font-poppins">
+            My Projects
+          </h1>
+          <p className="text-sm text-slate-500 mt-1">
+            Welcome back, {user?.fullName?.split(' ')[0]}. 
+            {projects.length > 0
+              ? ` You have ${projects.length} active project${projects.length !== 1 ? 's' : ''}.`
+              : ' Create your first project to get started.'}
+          </p>
+        </div>
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="flex items-center gap-2 bg-[#0F766E] hover:bg-[#0D6B63] 
+                     text-white px-5 py-2.5 rounded-xl font-semibold text-sm 
+                     transition-colors shadow-sm"
+        >
+          <Plus className="w-4 h-4" />
+          New Project
+        </button>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-1 mb-6 border-b border-slate-200">
+        {(['all', 'archived'] as const).map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`px-4 py-2.5 text-sm font-medium capitalize transition-colors
+              ${activeTab === tab
+                ? 'text-[#0F766E] border-b-2 border-[#0F766E]'
+                : 'text-slate-500 hover:text-slate-700'
+              }`}
+          >
+            {tab === 'all' ? 'All Projects' : 'Archived'}
+          </button>
+        ))}
+      </div>
+
+      {/* Projects Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        {/* Create new card */}
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="border-2 border-dashed border-slate-300 rounded-2xl p-8
+                     hover:border-[#0F766E] hover:bg-teal-50/30 transition-all
+                     flex flex-col items-center justify-center gap-3 
+                     text-slate-400 hover:text-[#0F766E] min-h-[180px] group"
+        >
+          <div className="w-12 h-12 rounded-full bg-slate-100 group-hover:bg-teal-100 
+                          flex items-center justify-center transition-colors">
+            <Plus className="w-6 h-6" />
+          </div>
+          <span className="text-sm font-medium">Create New Project</span>
+        </button>
+
+        {/* Real project cards from MongoDB */}
+        {projects.length === 0 ? (
+          <EmptyState />
+        ) : (
+          projects.map((project) => (
+            <ProjectCard
+              key={project.id || project._id}
+              project={project}
+              onOpen={() => handleOpenProject(project)}
+              onDuplicate={() => duplicateProject(project.id || project._id!)}
+              onArchive={() => archiveProject(project.id || project._id!)}
+              onDelete={() => deleteProject(project.id || project._id!)}
+            />
+          ))
         )}
       </div>
 
-      {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[...Array(6)].map((_, i) => (
-            <Skeleton key={i} className="h-[200px] w-full rounded-2xl" />
-          ))}
-        </div>
-      ) : hasNoProjects ? (
-        <OnboardingEmpty 
-          onCreateProject={() => setIsModalOpen(true)} 
-          organizationType={user?.organizationType || 'clinic'} 
-        />
-      ) : projects && projects.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {activeTab === 'all' && (
-            <button 
-              onClick={() => setIsModalOpen(true)}
-              className="flex flex-col items-center justify-center p-8 bg-slate-50 border-2 border-dashed border-slate-300 rounded-2xl hover:bg-slate-100 hover:border-slate-400 transition-all group"
-            >
-              <div className="h-12 w-12 rounded-full bg-white border border-slate-200 flex items-center justify-center mb-4 text-slate-400 group-hover:scale-110 group-hover:text-[#0F766E] transition-all">
-                <Plus size={24} />
-              </div>
-              <span className="text-sm font-bold text-slate-400 group-hover:text-[#0F766E] transition-colors">Create New Project</span>
-            </button>
-          )}
-
-          {projects.map((project) => (
-            <ProjectCard 
-              key={project._id}
-              id={project._id}
-              name={project.name}
-              orgName={project.organizationName}
-              domain={project.category}
-              status={project.status as ProjectStatus}
-              updatedAt={project.updatedAt}
-              onArchive={() => archiveMutation.mutate(project._id)}
-              onDuplicate={() => duplicateMutation.mutate(project._id)}
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-slate-100 shadow-sm">
-          <FolderOpen size={48} className="text-slate-200 mb-4" />
-          <p className="text-slate-500 font-medium">No {activeTab} projects found.</p>
-        </div>
-      )}
-
-      <CreateProjectModal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
+      {/* Create Project Modal */}
+      <CreateProjectModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
       />
-    </AppShell>
+    </div>
   );
-};
-
-export default ProjectHubPage;
+}

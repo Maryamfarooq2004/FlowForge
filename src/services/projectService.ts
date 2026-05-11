@@ -1,62 +1,43 @@
 import axiosInstance from '../lib/axios';
-
-export interface Project {
-  _id: string;
-  name: string;
-  organizationName?: string;
-  category: 'clinic' | 'school';
-  status: 'intake' | 'spec_ready' | 'preview' | 'live' | 'archived' | 'generating' | 'extraction_failed';
-  stagingUrl?: string;
-  liveUrl?: string;
-  isArchived: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
+import type { Project, CreateProjectDto, UpdateProjectDto } from '../types/project.types';
+import type { ApiResponse, PaginatedResponse } from '../types/api.types';
 
 const projectService = {
-  getAll: async (): Promise<Project[]> => {
-    const response = await axiosInstance.get('/projects');
-    return response.data.data;
-  },
+  // GET all projects for logged-in user
+  getProjects: (params?: { status?: string; domain?: string; page?: number; limit?: number }) =>
+    axiosInstance.get<ApiResponse<PaginatedResponse<Project>>>('/projects', { params }),
 
-  getArchived: async (): Promise<Project[]> => {
-    const response = await axiosInstance.get('/projects/archived');
-    return response.data.data;
-  },
+  // GET single project by ID
+  getProject: (id: string) =>
+    axiosInstance.get<ApiResponse<{ project: Project }>>(`/projects/${id}`),
 
-  getById: async (id: string): Promise<Project> => {
-    const response = await axiosInstance.get(`/projects/${id}`);
-    return response.data.data;
-  },
+  // POST create new project
+  createProject: (data: CreateProjectDto) =>
+    axiosInstance.post<ApiResponse<{ project: Project }>>('/projects', data),
 
-  create: async (data: { name: string; category: string; organizationName?: string }): Promise<Project> => {
-    const response = await axiosInstance.post('/projects', data);
-    return response.data.data;
-  },
+  // PATCH update project
+  updateProject: (id: string, data: UpdateProjectDto) =>
+    axiosInstance.patch<ApiResponse<{ project: Project }>>(`/projects/${id}`, data),
 
-  archive: async (id: string): Promise<Project> => {
-    const response = await axiosInstance.patch(`/projects/${id}/archive`);
-    return response.data.data;
-  },
+  // DELETE project
+  deleteProject: (id: string) =>
+    axiosInstance.delete<ApiResponse<null>>(`/projects/${id}`),
 
-  restore: async (id: string): Promise<Project> => {
-    const response = await axiosInstance.patch(`/projects/${id}/restore`);
-    return response.data.data;
-  },
+  // PATCH duplicate project
+  duplicateProject: (id: string) =>
+    axiosInstance.post<ApiResponse<{ project: Project }>>(`/projects/${id}/duplicate`),
 
-  duplicate: async (id: string): Promise<Project> => {
-    const response = await axiosInstance.post(`/projects/${id}/duplicate`);
-    return response.data.data;
-  },
+  // PATCH archive project
+  archiveProject: (id: string) =>
+    axiosInstance.patch<ApiResponse<{ project: Project }>>(`/projects/${id}/archive`),
 
-  delete: async (id: string): Promise<void> => {
-    await axiosInstance.delete(`/projects/${id}`);
-  },
+  // PATCH restore archived project
+  restoreProject: (id: string) =>
+    axiosInstance.patch<ApiResponse<{ project: Project }>>(`/projects/${id}/restore`),
 
-  updateStatus: async (id: string, status: string): Promise<Project> => {
-    const response = await axiosInstance.patch(`/projects/${id}`, { status });
-    return response.data.data;
-  }
+  // GET archived projects
+  getArchivedProjects: () =>
+    axiosInstance.get<ApiResponse<PaginatedResponse<Project>>>('/projects/archived'),
 };
 
 export default projectService;
