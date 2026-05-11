@@ -14,7 +14,7 @@ const SettingsPage: React.FC = () => {
   const [isEmailPending, setIsEmailPending] = useState(true); // Mock pending state
 
   return (
-    <AppShell className="pb-10">
+    <div className="pb-10">
       {/* Search Header */}
       <div className="relative mb-8">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
@@ -27,11 +27,11 @@ const SettingsPage: React.FC = () => {
 
       <header className="mb-10">
         <h1 className="text-[32px] font-bold text-slate-900 font-poppins leading-tight">Account Settings</h1>
-        <p className="text-slate-500 font-inter mt-1">Manage your professional profile and clinic branding identity.</p>
+        <p className="text-slate-500 font-inter mt-1">Manage your professional profile and branding identity.</p>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-10 gap-8">
-        {/* Left Column - Personal Info */}
+        {/* Left Column - Personal Info & Security */}
         <div className="lg:col-span-6 space-y-8">
           
           {/* Pending Email Banner */}
@@ -49,20 +49,13 @@ const SettingsPage: React.FC = () => {
                 <div className="flex-1">
                   <h3 className="font-semibold text-amber-800 text-sm">Email change pending verification</h3>
                   <p className="text-sm text-amber-700 leading-snug mt-0.5">
-                    We sent a link to <span className="font-semibold">{user?.email}</span> — click it to confirm. Your current email remains active until then.
+                    We sent a link to <span className="font-semibold">{user?.email}</span> — click it to confirm.
                   </p>
                 </div>
                 <div className="flex items-center space-x-2 shrink-0 self-end sm:self-auto">
-                  <button className="text-xs font-semibold text-amber-600 hover:text-amber-800 transition-colors">
-                    Resend
-                  </button>
+                  <button className="text-xs font-semibold text-amber-600 hover:text-amber-800">Resend</button>
                   <span className="text-amber-200">|</span>
-                  <button 
-                    onClick={() => setIsEmailPending(false)}
-                    className="text-xs font-semibold text-amber-600 hover:text-amber-800 transition-colors"
-                  >
-                    Cancel
-                  </button>
+                  <button onClick={() => setIsEmailPending(false)} className="text-xs font-semibold text-amber-600 hover:text-amber-800">Cancel</button>
                 </div>
               </motion.div>
             )}
@@ -72,52 +65,22 @@ const SettingsPage: React.FC = () => {
             <h2 className="text-xl font-semibold text-slate-800 font-poppins mb-6">Personal Information</h2>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-              <Input 
-                label="FULL NAME" 
-                defaultValue={user?.fullName || ''} 
-                className="font-inter"
-              />
-              <Input 
-                label="BUSINESS NAME" 
-                defaultValue={user?.businessName || user?.orgType || ''} 
-                className="font-inter"
-              />
-              <div className="md:col-span-2 relative space-y-4">
-                <div className="relative">
-                  <Input 
-                    label={isEmailPending ? "CURRENT EMAIL" : "EMAIL ADDRESS"}
-                    defaultValue={user?.email || ''} 
-                    readOnly={isEmailPending}
-                    className={cn("font-inter pr-24", isEmailPending && "bg-slate-50 text-slate-500 border-slate-200")}
-                  />
-                  <div className="absolute right-3 top-[34px] flex items-center space-x-1 bg-green-50 text-green-700 px-3 py-1 rounded-full text-[10px] font-bold tracking-wider">
-                    <CheckCircle2 size={12} />
-                    <span>VERIFIED</span>
-                  </div>
+              <Input label="FULL NAME" defaultValue={user?.fullName || ''} />
+              <Input label="BUSINESS NAME" defaultValue={user?.businessName || user?.orgType || ''} />
+              <div className="md:col-span-2 relative">
+                <Input 
+                  label={isEmailPending ? "CURRENT EMAIL" : "EMAIL ADDRESS"}
+                  defaultValue={user?.email || ''} 
+                  readOnly={isEmailPending}
+                  className={cn("pr-24", isEmailPending && "bg-slate-50")}
+                />
+                <div className="absolute right-3 top-[34px] flex items-center bg-green-50 text-green-700 px-3 py-1 rounded-full text-[10px] font-bold">
+                  <CheckCircle2 size={12} className="mr-1" /> VERIFIED
                 </div>
-
-                {isEmailPending && (
-                  <div className="relative">
-                    <Input 
-                      label="PENDING EMAIL" 
-                      defaultValue="new@email.com" 
-                      className="font-inter pr-24 border-amber-200 focus:border-amber-400 focus:ring-amber-400/20"
-                    />
-                    <div className="absolute right-3 top-[34px] flex items-center space-x-1 bg-amber-50 text-amber-700 px-3 py-1 rounded-full text-[10px] font-bold tracking-wider animate-pulse border border-amber-200">
-                      <span>PENDING</span>
-                    </div>
-                    <button 
-                      onClick={() => setIsEmailPending(false)}
-                      className="text-xs text-red-400 hover:text-red-600 hover:underline mt-2 inline-block font-medium"
-                    >
-                      Cancel email change ×
-                    </button>
-                  </div>
-                )}
               </div>
             </div>
 
-            {/* Change Password Accordion */}
+            {/* Security Section */}
             <div className="border border-slate-100 rounded-xl overflow-hidden">
               <button 
                 onClick={() => setIsPasswordOpen(!isPasswordOpen)}
@@ -132,34 +95,16 @@ const SettingsPage: React.FC = () => {
 
               <AnimatePresence>
                 {isPasswordOpen && (
-                  <motion.div
-                    initial={{ height: 0 }}
-                    animate={{ height: 'auto' }}
-                    exit={{ height: 0 }}
-                    className="overflow-hidden"
-                  >
+                  <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden">
                     <div className="p-6 space-y-6 border-t border-slate-100">
                       <Input label="CURRENT PASSWORD" type="password" placeholder="••••••••••••" />
-                      
                       <div className="space-y-2">
-                        <div className="flex justify-between items-end">
-                          <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">NEW PASSWORD</label>
-                          <span className="text-[10px] font-bold text-[#0F766E]">STRONG</span>
-                        </div>
                         <Input label="NEW PASSWORD" type="password" placeholder="••••••••••••" />
-                        <div className="h-1 w-full bg-slate-100 rounded-full overflow-hidden">
-                          <div 
-                            className="h-full bg-gradient-to-r from-red-500 via-amber-500 to-[#34D399] transition-all duration-500" 
-                            style={{ width: `${passwordStrength}%` }}
-                          />
+                        <div className="h-1 w-full bg-slate-100 rounded-full">
+                          <div className="h-full bg-teal-500" style={{ width: '85%' }} />
                         </div>
                       </div>
-
-                      <Input label="CONFIRM NEW PASSWORD" type="password" placeholder="••••••••••••" />
-                      
-                      <Button variant="outline" size="sm" className="w-fit">
-                        Update Password
-                      </Button>
+                      <Button variant="outline" size="sm">Update Password</Button>
                     </div>
                   </motion.div>
                 )}
@@ -167,67 +112,81 @@ const SettingsPage: React.FC = () => {
             </div>
           </div>
 
-          <Button className="w-full h-14 bg-gradient-to-r from-[#0F766E] to-[#4F46E5] text-white font-bold text-lg shadow-lg shadow-teal-900/10">
-            Save Changes
-          </Button>
+          {/* FAQ Section */}
+          <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
+            <h2 className="text-xl font-semibold text-slate-800 font-poppins mb-6">Help & Support</h2>
+            <div className="space-y-4">
+              {[
+                { q: "How do I update my business domain?", a: "You can change your domain from the Project Hub by creating a new project with the desired sector." },
+                { q: "Can I export my project data?", a: "Yes, you can export your intake data as a PDF or JSON from the Project Review page." },
+                { q: "Is my medical data secure?", a: "Absolutely. We use HIPAA-compliant storage and end-to-end encryption for all sensitive fields." }
+              ].map((faq, i) => (
+                <div key={i} className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                  <h4 className="text-sm font-bold text-slate-800 mb-1">{faq.q}</h4>
+                  <p className="text-xs text-slate-500 leading-relaxed">{faq.a}</p>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
-        {/* Right Column - Business Branding */}
+        {/* Right Column - Branding & Notifications */}
         <div className="lg:col-span-4 space-y-8">
+          {/* Notifications Card */}
+          <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
+            <h2 className="text-xl font-semibold text-slate-800 font-poppins mb-6">Notifications</h2>
+            <div className="space-y-6">
+              {[
+                { title: "Security Alert", msg: "A new login was detected from US West (Railway).", time: "2h ago", type: "alert" },
+                { title: "Project Milestone", msg: "Clinic CRM project reached 'Intake Review' phase.", time: "5h ago", type: "success" },
+                { title: "Plan Update", msg: "Your trial period ends in 3 days. Upgrade for unlimited seats.", time: "1d ago", type: "info" }
+              ].map((n, i) => (
+                <div key={i} className="flex gap-4 group">
+                  <div className={cn(
+                    "w-2 h-2 rounded-full mt-1.5 shrink-0 transition-transform group-hover:scale-150",
+                    n.type === 'alert' ? 'bg-red-500' : n.type === 'success' ? 'bg-green-500' : 'bg-blue-500'
+                  )} />
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-800">{n.title}</h4>
+                    <p className="text-xs text-slate-500 mt-0.5 leading-snug">{n.msg}</p>
+                    <span className="text-[10px] text-slate-400 mt-1 block font-medium uppercase tracking-wider">{n.time}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
           <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
             <h2 className="text-xl font-semibold text-slate-800 font-poppins mb-6">Business Branding</h2>
-
-            {/* Logo Upload */}
             <div className="space-y-3 mb-8">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">BRAND IDENTITY LOGO</label>
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">BRAND IDENTITY LOGO</label>
               <div className="border-2 border-dashed border-slate-200 rounded-2xl p-10 flex flex-col items-center justify-center text-center cursor-pointer hover:border-[#0F766E] hover:bg-teal-50/30 transition-all group">
                 <div className="h-14 w-14 rounded-full bg-teal-50 flex items-center justify-center mb-4 text-[#34D399] group-hover:scale-110 transition-transform">
                   <UploadCloud size={28} />
                 </div>
-                <p className="text-sm font-bold text-slate-700">Drag and drop logo here</p>
-                <p className="text-xs text-slate-400 mt-1">PNG, JPG, SVG up to 5MB</p>
+                <p className="text-sm font-bold text-slate-700">Upload logo</p>
+                <p className="text-[10px] text-slate-400 mt-1">PNG/SVG max 5MB</p>
               </div>
             </div>
 
-            {/* Preview */}
-            <div className="space-y-3 mb-8">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">PREVIEW ON SURFACE</label>
-              <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 flex items-center space-x-4">
-                <div className="h-12 w-12 bg-[#134E4A] rounded-lg flex items-center justify-center text-white/50">
-                  <Plus size={24} />
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-slate-800">{user?.businessName || 'My Organization'}</p>
-                  <p className="text-[10px] text-slate-400 font-medium uppercase tracking-tight">Default Clinic Cross Logo</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Theme Colors */}
             <div className="space-y-4">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">THEME COLORS</label>
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">THEME COLORS</label>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <div className="h-12 w-full bg-[#0F766E] rounded-lg shadow-inner" />
-                  <p className="text-[10px] text-center font-bold text-slate-400">#0F766E (Primary)</p>
+                  <div className="h-10 w-full bg-[#0F766E] rounded-lg shadow-inner" />
+                  <p className="text-[10px] text-center font-bold text-slate-400">#0F766E</p>
                 </div>
                 <div className="space-y-2">
-                  <div className="h-12 w-full bg-[#4F46E5] rounded-lg shadow-inner" />
-                  <p className="text-[10px] text-center font-bold text-slate-400">#4F46E5 (Secondary)</p>
+                  <div className="h-10 w-full bg-[#4F46E5] rounded-lg shadow-inner" />
+                  <p className="text-[10px] text-center font-bold text-slate-400">#4F46E5</p>
                 </div>
-              </div>
-
-              <div className="bg-teal-50/80 rounded-xl p-4 flex items-start space-x-3 border border-teal-100/50">
-                <Info size={18} className="text-[#0F766E] shrink-0 mt-0.5" />
-                <p className="text-xs text-[#0F766E] leading-relaxed font-medium">
-                  These colors will be used in your generated application theme to ensure consistent patient experience.
-                </p>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </AppShell>
+    </div>
+  );
   );
 };
 

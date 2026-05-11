@@ -1,13 +1,26 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+let genAIInstance: GoogleGenerativeAI | null = null;
+
+const getGenAI = () => {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey || apiKey === 'YOUR_GEMINI_API_KEY_HERE') {
+    return null;
+  }
+  if (!genAIInstance) {
+    genAIInstance = new GoogleGenerativeAI(apiKey);
+  }
+  return genAIInstance;
+};
 
 export const getSuggestionsService = async (
   content: string,
   screenSlug: string,
   domain: string
 ) => {
-  if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === 'YOUR_GEMINI_API_KEY_HERE') {
+  const genAI = getGenAI();
+  
+  if (!genAI) {
     return [
       'Enter your Gemini API key to see AI suggestions.',
       'AI can help you refine your workflow details.',

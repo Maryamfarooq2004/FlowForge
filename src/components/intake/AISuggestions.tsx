@@ -15,7 +15,7 @@ export const AISuggestions: React.FC<AISuggestionsProps> = ({
   domain,
   onSelectSuggestion,
 }) => {
-  const { data, isLoading } = useAISuggestions(content, screenSlug, domain);
+  const { data, isLoading, isError } = useAISuggestions(content, screenSlug, domain);
 
   if (content.length <= 20) {
     return (
@@ -24,6 +24,18 @@ export const AISuggestions: React.FC<AISuggestionsProps> = ({
           <Sparkles size={14} className="text-[#0F766E]" />
           <span>Type more to get AI-powered suggestions...</span>
         </div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="mt-4 p-4 bg-red-50 border border-red-100 rounded-xl">
+        <div className="flex items-center gap-2 text-red-600 text-xs font-bold uppercase tracking-wider">
+          <Sparkles size={14} />
+          <span>AI Suggestions unavailable</span>
+        </div>
+        <p className="text-[10px] text-red-500 mt-1">Please check your connection or try again later.</p>
       </div>
     );
   }
@@ -51,7 +63,7 @@ export const AISuggestions: React.FC<AISuggestionsProps> = ({
           </button>
         ))}
         {!isLoading && (!data?.suggestions || data.suggestions.length === 0) && (
-          <span className="text-xs text-slate-400">No suggestions yet. Keep typing!</span>
+          <span className="text-xs text-slate-400">Thinking of ideas... Keep typing!</span>
         )}
       </div>
     </div>
