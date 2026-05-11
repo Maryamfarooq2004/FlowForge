@@ -40,7 +40,7 @@ const intakeService = {
 
   // Get domain-specific questions
   getQuestions: (category: 'clinic' | 'school') =>
-    axiosInstance.get(`/intake/questions?category=${category}`).then(res => res.data.data),
+    axiosInstance.get(`/intake/questions?category=${category}`).then(res => res.data?.data),
 
   // Get AI-powered suggestions
   getSuggestions: (content: string, screenSlug: string, domain: string) =>
@@ -48,13 +48,13 @@ const intakeService = {
       content,
       screenSlug,
       domain,
-    }).then(res => res.data.data),
+    }).then(res => res.data?.data),
 
   // Assemble the final bundle — builds the AI blueprint draft
   assembleBundle: (projectId: string) =>
     axiosInstance.post<ApiResponse<{ bundle: IntakeBundle }>>(
       `/projects/${projectId}/intake/assemble`
-    ).then(res => res.data.data.bundle),
+    ).then(res => res.data?.data?.bundle),
 };
 
 export default intakeService;

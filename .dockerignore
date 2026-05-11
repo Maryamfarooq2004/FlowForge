@@ -2,14 +2,9 @@ node_modules
 dist
 .git
 .gitignore
-README.md
-
-# Ignore all frontend folders to speed up backend build
-flowforge-frontend/
-client/
-frontend/
-src/
-public/
 *.log
+.env
 .vercel
 .next
+server/node_modules
+server/dist
