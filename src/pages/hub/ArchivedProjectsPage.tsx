@@ -99,7 +99,8 @@ const ArchivedProjectsPage: React.FC = () => {
   };
 
   return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
+    <>
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
         {/* Header */}
         <div className="flex items-start justify-between mb-8">
           <div>
@@ -221,6 +222,7 @@ const ArchivedProjectsPage: React.FC = () => {
         )}
       </motion.div>
 
+      {/* Delete Modal */}
       <DeleteModal project={deleteTarget} onClose={() => setDeleteTarget(null)} onConfirm={handleDelete} />
 
       {/* Toast */}
@@ -240,7 +242,7 @@ const ArchivedProjectsPage: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
-    </motion.div>
+    </>
   );
 };
 
