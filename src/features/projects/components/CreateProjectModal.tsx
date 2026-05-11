@@ -38,8 +38,8 @@ export const CreateProjectModal = ({ isOpen, onClose }: Props) => {
       { name: name.trim(), domain },
       {
         onSuccess: (response) => {
-          const projectId = response.data.data?.project?.id ||
-                            response.data.data?.project?._id;
+          const project = response.data.data?.project;
+          const projectId = project?.id || project?._id;
           onClose();
           setName('');
           setDomain(null);

@@ -2,7 +2,7 @@ import { lazy, Suspense } from 'react';
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { ProtectedRoute, PublicOnlyRoute } from '../components/shared/ProtectedRoute';
 import { AppShell } from '../components/layout/AppShell';
-import LoadingScreen from '../components/shared/LoadingScreen';
+import { LoadingScreen } from '../components/shared/LoadingScreen';
 
 // Lazy load all pages for code splitting
 const LoginPage         = lazy(() => import('../pages/auth/LoginPage'));
@@ -10,6 +10,11 @@ const RegisterPage      = lazy(() => import('../pages/auth/RegisterPage'));
 const ProjectHubPage    = lazy(() => import('../pages/hub/ProjectHubPage'));
 const SettingsPage      = lazy(() => import('../pages/hub/SettingsPage'));
 const NotFound          = lazy(() => import('../components/shared/NotFound'));
+
+// Intake Pages
+const IntakeFormPage    = lazy(() => import('../pages/intake/IntakeFormPage'));
+const GuidedIntakePage  = lazy(() => import('../pages/intake/GuidedIntakePage'));
+const IntakeReviewPage  = lazy(() => import('../pages/intake/IntakeReviewPage'));
 
 const withSuspense = (Component: React.LazyExoticComponent<any>) => (
   <Suspense fallback={<LoadingScreen />}>
@@ -33,15 +38,20 @@ export const router = createBrowserRouter([
 
   // Protected app routes
   {
-    path: '/hub',
+    path: '/',
     element: (
       <ProtectedRoute>
         <AppShell />
       </ProtectedRoute>
     ),
     children: [
-      { index: true,       element: withSuspense(ProjectHubPage) },
-      { path: 'settings',  element: withSuspense(SettingsPage) },
+      { path: 'hub',       element: withSuspense(ProjectHubPage) },
+      { path: 'hub/settings',  element: withSuspense(SettingsPage) },
+      
+      // Intake Flow
+      { path: 'project/:projectId/intake/form', element: withSuspense(IntakeFormPage) },
+      { path: 'project/:projectId/intake/story', element: withSuspense(GuidedIntakePage) },
+      { path: 'project/:projectId/intake/review', element: withSuspense(IntakeReviewPage) },
     ],
   },
 

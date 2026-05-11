@@ -263,6 +263,3 @@ export const getMeService = async (userId: string) => {
   }
   return sanitizeUser(user);
 };
-
- 
- 

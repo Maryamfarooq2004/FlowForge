@@ -9,7 +9,7 @@ export const Providers = ({ children }: { children: React.ReactNode }) => {
       <AuthInitializer>
         {children}
       </AuthInitializer>
-      {import.meta.env.DEV && (
+      {process.env.NODE_ENV === 'development' && (
         <ReactQueryDevtools initialIsOpen={false} />
       )}
     </QueryClientProvider>

@@ -3,7 +3,6 @@ import {
   useMutation,
   useQueryClient,
 } from '@tanstack/react-query';
-import type { UseQueryResult } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
 import projectService from '../services/projectService';
 import type { Project, CreateProjectDto, UpdateProjectDto } from '../types/project.types';
@@ -127,7 +126,7 @@ export const useDeleteProject = () => {
         { queryKey: projectKeys.lists() },
         (old: any) => ({
           ...old,
-          projects: old?.projects?.filter((p: Project) => p.id !== id) ?? [],
+          projects: old?.projects?.filter((p: Project) => (p.id || p._id) !== id) ?? [],
         })
       );
       return { previousProjects };

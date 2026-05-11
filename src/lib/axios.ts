@@ -1,5 +1,4 @@
-import axios from 'axios';
-import type {
+import axios, {
   AxiosInstance,
   InternalAxiosRequestConfig,
   AxiosResponse,

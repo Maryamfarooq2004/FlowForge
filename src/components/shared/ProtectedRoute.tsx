@@ -6,7 +6,7 @@ interface Props {
 }
 
 export const ProtectedRoute = ({ children }: Props) => {
-  const { isAuthenticated, isInitialized } = useAuthStore();
+  const { isAuthenticated } = useAuthStore();
   const location = useLocation();
 
   // AuthInitializer handles loading state

@@ -5,8 +5,6 @@ export interface User {
   fullName: string;
   email: string;
   orgType: OrgType;
-  organizationType?: OrgType;
-  role: 'user' | 'admin';
   businessName?: string;
   logoUrl?: string;
   createdAt: string;
@@ -22,7 +20,6 @@ export interface RegisterDto {
   fullName: string;
   email: string;
   orgType: OrgType;
-  organizationType: OrgType;
   password: string;
 }
 
