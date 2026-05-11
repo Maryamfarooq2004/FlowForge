@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { Mail, Search, Lock, ChevronDown, ChevronUp, UploadCloud, Plus, Info, CheckCircle2 } from 'lucide-react';
-import { AppShell } from '../../components/layout/AppShell';
+import { Mail, Search, Lock, ChevronDown, ChevronUp, UploadCloud, Plus, CheckCircle2 } from 'lucide-react';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { cn } from '../../utils/classNames';
@@ -186,7 +185,6 @@ const SettingsPage: React.FC = () => {
         </div>
       </div>
     </div>
-  );
   );
 };
 

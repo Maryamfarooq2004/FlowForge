@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { BookOpen, MessageCircle, Mail, ChevronDown, Paperclip, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AppShell } from '../../components/layout/AppShell';
 import { Button } from '../../components/ui/Button';
 import { cn } from '../../utils/classNames';
 
@@ -116,9 +115,8 @@ const SupportPage: React.FC = () => {
   };
 
   return (
-    <AppShell>
-      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
-        {/* Header */}
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
+      {/* Header */}
         <div className="mb-10">
           <h1 className="text-[32px] font-bold text-slate-900 font-poppins mb-2">Help & Support</h1>
           <p className="text-slate-500">Find answers, watch tutorials, or contact our team.</p>
@@ -265,9 +263,8 @@ const SupportPage: React.FC = () => {
               )}
             </AnimatePresence>
           </div>
-        </div>
-      </motion.div>
-    </AppShell>
+      </div>
+    </motion.div>
   );
 };
 

@@ -8,6 +8,8 @@ import LoadingScreen from '../components/shared/LoadingScreen';
 const LoginPage         = lazy(() => import('../pages/auth/LoginPage'));
 const RegisterPage      = lazy(() => import('../pages/auth/RegisterPage'));
 const ProjectHubPage    = lazy(() => import('../pages/hub/ProjectHubPage'));
+const ArchivedProjectsPage = lazy(() => import('../pages/hub/ArchivedProjectsPage'));
+const SupportPage       = lazy(() => import('../pages/hub/SupportPage'));
 const OnboardingPage    = lazy(() => import('../pages/onboarding/OnboardingPage'));
 const SettingsPage      = lazy(() => import('../pages/hub/SettingsPage'));
 const NotFound          = lazy(() => import('../components/shared/NotFound'));
@@ -46,9 +48,11 @@ export const router = createBrowserRouter([
       </ProtectedRoute>
     ),
     children: [
-      { path: 'hub',       element: withSuspense(ProjectHubPage) },
-      { path: 'onboarding', element: withSuspense(OnboardingPage) },
-      { path: 'hub/settings',  element: withSuspense(SettingsPage) },
+      { path: 'hub',              element: withSuspense(ProjectHubPage) },
+      { path: 'hub/archived',     element: withSuspense(ArchivedProjectsPage) },
+      { path: 'hub/support',      element: withSuspense(SupportPage) },
+      { path: 'onboarding',       element: withSuspense(OnboardingPage) },
+      { path: 'hub/settings',     element: withSuspense(SettingsPage) },
       
       // Intake Flow
       { path: 'project/:projectId/intake/form', element: withSuspense(IntakeFormPage) },
