@@ -72,9 +72,14 @@ const stateStyles = {
   default: 'border-slate-200 bg-white text-slate-600',
 };
 
+import { useAuthStore } from '../../store/authStore';
+import { useProject } from '../../hooks/useProjects';
+
 const WorkflowsOverviewPage: React.FC = () => {
   const navigate = useNavigate();
   const { projectId } = useParams();
+  const { user } = useAuthStore();
+  const { data: project } = useProject(projectId);
   const [openState, setOpenState] = useState<string | null>('confirmed');
   const [activeTab, setActiveTab] = useState<'alerts' | 'workflows'>('workflows');
 
@@ -91,7 +96,7 @@ const WorkflowsOverviewPage: React.FC = () => {
           <Logo size="sm" variant="light" useSecondary={true} />
           <div className="h-4 w-[1px] bg-white/20" />
           <div className="flex items-center space-x-2 text-xs font-medium">
-            <span className="text-white/50">My Organization</span>
+            <span className="text-white/50">{project?.name || 'My Organization'}</span>
             <span className="text-white/30">›</span>
             <span className="text-white">Workflows</span>
           </div>
@@ -119,9 +124,22 @@ const WorkflowsOverviewPage: React.FC = () => {
         </div>
 
         <div className="flex items-center space-x-4">
-          <button className="text-white/70 hover:text-white"><Bell size={20} /></button>
-          <button className="text-white/70 hover:text-white"><HelpCircle size={20} /></button>
-          <Avatar name="Maryam Farooq" size="sm" className="bg-[#34D399] text-[#134E4A]" />
+          <button 
+            onClick={() => navigate('/hub/notifications')}
+            className="text-white/70 hover:text-white"
+          >
+            <Bell size={20} />
+          </button>
+          <button 
+            onClick={() => navigate('/hub/support')}
+            className="text-white/70 hover:text-white"
+          >
+            <HelpCircle size={20} />
+          </button>
+          <div className="flex items-center gap-3">
+            <Avatar name={user?.fullName || "User"} size="sm" className="bg-[#34D399] text-[#134E4A]" />
+            <span className="text-sm font-semibold text-white hidden lg:block">{user?.fullName}</span>
+          </div>
         </div>
       </nav>
 

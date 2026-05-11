@@ -18,9 +18,14 @@ import {
   EyeOff
 } from 'lucide-react';
 
+import { useAuthStore } from '../../store/authStore';
+import { useProject } from '../../hooks/useProjects';
+
 const AlertsSetupPage: React.FC = () => {
   const navigate = useNavigate();
   const { projectId } = useParams();
+  const { user } = useAuthStore();
+  const { data: project } = useProject(projectId);
   
   const [isEmailSettingsOpen, setIsEmailSettingsOpen] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
@@ -56,7 +61,7 @@ const AlertsSetupPage: React.FC = () => {
           <Logo size="sm" variant="light" useSecondary={true} />
           <div className="h-4 w-[1px] bg-white/20" />
           <div className="flex items-center space-x-2 text-xs font-medium">
-            <span className="text-white/50">Project: My Organization</span>
+            <span className="text-white/50">Project: {project?.name || 'My Organization'}</span>
             <span className="text-white/30">&gt;</span>
             <span className="text-white">Set Up Alerts</span>
           </div>
@@ -69,13 +74,22 @@ const AlertsSetupPage: React.FC = () => {
         </div>
 
         <div className="flex items-center space-x-4">
-          <button className="text-white/70 hover:text-white">
+          <button 
+            onClick={() => navigate('/hub/notifications')}
+            className="text-white/70 hover:text-white"
+          >
             <Bell size={20} />
           </button>
-          <button className="text-white/70 hover:text-white">
+          <button 
+            onClick={() => navigate('/hub/support')}
+            className="text-white/70 hover:text-white"
+          >
             <HelpCircle size={20} />
           </button>
-          <Avatar name="Maryam Farooq" size="sm" className="bg-[#34D399] text-[#134E4A]" />
+          <div className="flex items-center gap-3">
+            <Avatar name={user?.fullName || "User"} size="sm" className="bg-[#34D399] text-[#134E4A]" />
+            <span className="text-sm font-semibold text-white hidden lg:block">{user?.fullName}</span>
+          </div>
         </div>
       </nav>
 

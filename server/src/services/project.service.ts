@@ -158,9 +158,9 @@ export const getResumePointService = async (
     intake_review: `/project/${projectId}/intake/review`,
     documents:     `/project/${projectId}/documents`,
     theme:         `/project/${projectId}/theme`,
-    blueprint:     `/project/${projectId}/blueprint`,
+    blueprint:     `/project/${projectId}/spec`,
+    generating:    `/project/${projectId}/spec`,
     alerts:        `/project/${projectId}/alerts`,
-    generating:    `/project/${projectId}/generating`,
     preview:       `/project/${projectId}/preview`,
     deployment:    `/project/${projectId}/deploy`,
   };

@@ -1,11 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
-import { Bell, HelpCircle, ChevronDown, User, Settings, LogOut } from 'lucide-react';
+import { Bell, HelpCircle, ChevronDown, User, Settings, LogOut, Menu } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { useLogout } from '../../hooks/useAuth';
+import { useUIStore } from '../../store/uiStore';
 
 export const Navbar = () => {
   const { user } = useAuthStore();
+  const { toggleSidebar } = useUIStore();
   const { mutate: logout, isPending: isLoggingOut } = useLogout();
   const navigate = useNavigate();
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -34,31 +36,47 @@ export const Navbar = () => {
   return (
     <nav className="h-14 bg-[#134E4A] fixed top-0 left-0 right-0 z-50 
                     flex items-center justify-between px-6 shadow-sm">
-      {/* Logo */}
-      <div
-        className="flex items-center gap-2.5 cursor-pointer"
-        onClick={() => navigate('/hub')}
-      >
-        <div className="w-7 h-7 bg-teal-400/20 rounded-lg flex items-center 
-                        justify-center border border-teal-400/30">
-          <span className="text-teal-300 font-bold text-xs">FF</span>
+      {/* Left: Menu + Logo */}
+      <div className="flex items-center gap-4">
+        <button 
+          onClick={toggleSidebar}
+          className="p-2 rounded-lg text-teal-300 hover:text-white 
+                     hover:bg-teal-700/50 transition-colors"
+        >
+          <Menu className="w-6 h-6" />
+        </button>
+
+        <div
+          className="flex items-center gap-2.5 cursor-pointer"
+          onClick={() => navigate('/hub')}
+        >
+          <div className="w-7 h-7 bg-teal-400/20 rounded-lg flex items-center 
+                          justify-center border border-teal-400/30">
+            <span className="text-teal-300 font-bold text-xs">FF</span>
+          </div>
+          <span className="text-white font-bold text-base font-poppins tracking-tight">
+            FlowForge
+          </span>
         </div>
-        <span className="text-white font-bold text-base font-poppins tracking-tight">
-          FlowForge
-        </span>
       </div>
 
       {/* Right Controls */}
       <div className="flex items-center gap-2">
         {/* Notifications */}
-        <button className="p-2 rounded-lg text-teal-300 hover:text-white 
-                           hover:bg-teal-700/50 transition-colors relative">
+        <button 
+          onClick={() => navigate('/hub/notifications')}
+          className="p-2 rounded-lg text-teal-300 hover:text-white 
+                           hover:bg-teal-700/50 transition-colors relative"
+        >
           <Bell className="w-5 h-5" />
         </button>
 
         {/* Help */}
-        <button className="p-2 rounded-lg text-teal-300 hover:text-white 
-                           hover:bg-teal-700/50 transition-colors">
+        <button 
+          onClick={() => navigate('/hub/support')}
+          className="p-2 rounded-lg text-teal-300 hover:text-white 
+                           hover:bg-teal-700/50 transition-colors"
+        >
           <HelpCircle className="w-5 h-5" />
         </button>
 

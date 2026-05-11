@@ -52,6 +52,9 @@ const projectService = {
 
   getArchivedProjects: () =>
     axiosInstance.get<ApiResponse<{ items: Project[] }>>('/projects/archived'),
+
+  restoreProject: (id: string) =>
+    axiosInstance.patch(`/projects/${id}/restore`),
 };
 
 export default projectService;

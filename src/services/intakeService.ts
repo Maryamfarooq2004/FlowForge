@@ -49,6 +49,12 @@ const intakeService = {
       screenSlug,
       domain,
     }).then(res => res.data.data),
+
+  // Assemble the final bundle — builds the AI blueprint draft
+  assembleBundle: (projectId: string) =>
+    axiosInstance.post<ApiResponse<{ bundle: IntakeBundle }>>(
+      `/projects/${projectId}/intake/assemble`
+    ).then(res => res.data.data.bundle),
 };
 
 export default intakeService;

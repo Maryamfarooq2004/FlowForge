@@ -67,4 +67,14 @@ router.patch('/screen/:screenNumber/autosave', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+// POST assemble bundle
+router.post('/assemble', async (req, res, next) => {
+  try {
+    const { projectId } = req.params as any;
+    console.log(`[IntakeRouter] Hit /assemble for project ${projectId}`);
+    const bundle = await is.assembleBundleService(uid(req), projectId);
+    res.json({ success: true, data: { bundle } });
+  } catch (e) { next(e); }
+});
+
 export default router;

@@ -8,9 +8,9 @@ import type {
 import { useAuthStore } from '../store/authStore';
 import { queryClient } from './queryClient';
 
-// Hardcoded Railway URL — never use env variable for this
-// to avoid Vercel build-time substitution issues
-const BASE_URL = 'https://flowforge-production-0fc1.up.railway.app';
+const BASE_URL = import.meta.env.DEV
+  ? 'http://127.0.0.1:5000'
+  : 'https://flowforge-production-0fc1.up.railway.app';
 
 export const axiosInstance: AxiosInstance = axios.create({
   baseURL: `${BASE_URL}/api/v1`,
@@ -70,7 +70,7 @@ axiosInstance.interceptors.response.use(
 
     // Network error — no response from Railway
     if (!error.response) {
-      console.error('[API] Network error — Railway unreachable:', error.message);
+      console.error('[API] Network error — Server unreachable:', error.message);
       return Promise.reject({
         response: {
           data: {

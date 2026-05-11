@@ -49,15 +49,16 @@ export default function GuidedIntakePage({ screenSlug }: GuidedIntakePageProps) 
 
   // ── PREFILL FORM FROM DATABASE ON LOAD ──────────────────────
   // This is what enables resume — existing data comes from MongoDB
+  // Always reset content when switching screens to prevent text leaking
   useEffect(() => {
-    if (!bundle) return;
+    if (!bundle) {
+      setContent('');
+      setConfirmedItems([]);
+      return;
+    }
     const screenData = bundle.guidedScreens.find(s => s.screen === screenNumber);
-    if (screenData?.content) {
-      setContent(screenData.content);
-    }
-    if (screenData?.confirmedItems) {
-      setConfirmedItems(screenData.confirmedItems);
-    }
+    setContent(screenData?.content || '');
+    setConfirmedItems(screenData?.confirmedItems || []);
   }, [bundle, screenNumber]);
 
   // ── AUTO-SAVE EVERY 60 SECONDS ───────────────────────────────
@@ -115,7 +116,9 @@ export default function GuidedIntakePage({ screenSlug }: GuidedIntakePageProps) 
     if (screen === 'roles') {
       const roleKeywords = [
         'receptionist', 'doctor', 'nurse', 'manager', 'cashier',
-        'admin', 'teacher', 'principal', 'officer', 'staff'
+        'admin', 'teacher', 'principal', 'officer', 'staff',
+        'student', 'parent', 'customer', 'client', 'agent',
+        'technician', 'engineer', 'supervisor', 'director'
       ];
       return roleKeywords.filter(r => words.some(w => w.includes(r)));
     }

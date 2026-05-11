@@ -164,8 +164,20 @@ export const useDeleteProject = () => {
   return useMutation({
     mutationFn: (id: string) => projectService.deleteProject(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: projectKeys.all });
       toast.success('Project deleted.');
+    },
+  });
+};
+
+// ── RESTORE ────────────────────────────────────────────────────
+export const useRestoreProject = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => projectService.restoreProject(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: projectKeys.all });
+      toast.success('Project restored to hub.');
     },
   });
 };

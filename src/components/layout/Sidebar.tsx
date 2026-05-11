@@ -14,6 +14,7 @@ import {
 import { cn } from '../../utils/classNames';
 import { Avatar } from '../ui/Avatar';
 import { useAuthStore } from '../../store/authStore';
+import { useUIStore } from '../../store/uiStore';
 
 interface SidebarProps {
   type?: 'hub' | 'project';
@@ -22,6 +23,7 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ type = 'hub' }) => {
   const { projectId } = useParams();
   const { user } = useAuthStore();
+  const { sidebarCollapsed } = useUIStore();
 
   const hubItems = [
     { icon: FolderRoot, label: 'My Projects', path: '/hub' },
@@ -43,10 +45,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ type = 'hub' }) => {
   const subtitle = type === 'project' ? 'Build Insights' : 'Management Center';
 
   return (
-    <aside className="w-52 bg-white border-r border-[#E2E8F0] flex flex-col h-[calc(100vh-3.5rem)] sticky top-14">
-      <div className="p-5">
-        <h3 className="text-sm font-bold text-slate-800 uppercase tracking-tight">{title}</h3>
-        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">{subtitle}</p>
+    <aside className={cn(
+      "bg-white border-r border-[#E2E8F0] flex flex-col h-[calc(100vh-3.5rem)] sticky top-14 transition-all duration-300",
+      sidebarCollapsed ? "w-16" : "w-52"
+    )}>
+      <div className={cn("p-5", sidebarCollapsed && "px-4 flex justify-center")}>
+        {!sidebarCollapsed ? (
+          <>
+            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-tight">{title}</h3>
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">{subtitle}</p>
+          </>
+        ) : (
+          <div className="h-5" />
+        )}
       </div>
 
       <nav className="flex-1 px-3 space-y-1 mt-2">
@@ -62,22 +73,24 @@ export const Sidebar: React.FC<SidebarProps> = ({ type = 'hub' }) => {
             )}
           >
             <item.icon size={18} className={cn(
-              "transition-colors",
+              "transition-colors shrink-0",
               "group-hover:text-[#0F766E]"
             )} />
-            <span>{item.label}</span>
+            {!sidebarCollapsed && <span>{item.label}</span>}
           </NavLink>
         ))}
       </nav>
 
       {/* User Card Bottom */}
-      <div className="p-4 border-t border-[#E2E8F0] bg-slate-50/50">
+      <div className={cn("p-4 border-t border-[#E2E8F0] bg-slate-50/50", sidebarCollapsed && "p-2 flex justify-center")}>
         <div className="flex items-center space-x-3">
           <Avatar name={user?.fullName || "User"} size="sm" />
-          <div className="overflow-hidden">
-            <p className="text-xs font-bold text-slate-800 truncate">{user?.fullName}</p>
-            <p className="text-[10px] text-slate-500 truncate">{user?.email}</p>
-          </div>
+          {!sidebarCollapsed && (
+            <div className="overflow-hidden">
+              <p className="text-xs font-bold text-slate-800 truncate">{user?.fullName}</p>
+              <p className="text-[10px] text-slate-500 truncate">{user?.email}</p>
+            </div>
+          )}
         </div>
       </div>
     </aside>

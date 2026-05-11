@@ -20,13 +20,19 @@ import {
   Database,
   Activity,
   Users,
-  BellRing
+  BellRing,
+  Loader2
 } from 'lucide-react';
+import { useProject } from '../../hooks/useProjects';
 
 const BlueprintReviewPage: React.FC = () => {
   const navigate = useNavigate();
   const { projectId } = useParams();
   const [activeSection, setActiveSection] = useState('track');
+
+  const { data: project, isLoading } = useProject(projectId);
+
+  if (isLoading) return <div className="min-h-screen flex items-center justify-center bg-slate-50"><Loader2 className="w-10 h-10 animate-spin text-[#0F766E]" /></div>;
 
   const scrollTo = (id: string) => {
     setActiveSection(id);
@@ -38,37 +44,14 @@ const BlueprintReviewPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col">
-      {/* Header */}
-      <nav className="h-14 bg-[#134E4A] flex items-center justify-between px-6 shrink-0 sticky top-0 z-50">
-        <div className="flex items-center space-x-6">
-          <Logo size="sm" variant="light" useSecondary={true} />
-          <div className="h-4 w-[1px] bg-white/20" />
-          <div className="flex space-x-4">
-            <button className="text-sm font-bold text-white border-b-2 border-white pb-1 mt-1">WorkflowSpec</button>
-            <button className="text-sm font-bold text-white/40 hover:text-white/70 transition-colors pb-1 mt-1 border-b-2 border-transparent">Review Studio</button>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-center flex-1">
-          <span className="text-white/80 text-sm font-medium">My Organization — App Blueprint Draft</span>
-        </div>
-
-        <div className="flex items-center space-x-4">
-          <button className="text-white/70 hover:text-white">
-            <Bell size={20} />
-          </button>
-          <Avatar name="Maryam Farooq" size="sm" className="bg-[#34D399] text-[#134E4A]" />
-        </div>
-      </nav>
-
+    <div className="bg-[#F8FAFC]">
       {/* Main Content */}
-      <main className="flex-1 max-w-[1600px] w-full mx-auto p-8 flex gap-8 items-start relative">
+      <main className="max-w-[1400px] mx-auto flex flex-col lg:flex-row gap-8 items-start relative">
         
         {/* Left Jump Nav (Sticky) */}
-        <aside className="w-48 shrink-0 sticky top-24 bg-white rounded-xl border border-slate-200 p-4 shadow-sm hidden lg:block">
+        <aside className="w-full lg:w-48 shrink-0 lg:sticky lg:top-24 bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
           <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4 px-2">JUMP TO SECTION</h3>
-          <nav className="space-y-1">
+          <nav className="flex lg:flex-col overflow-x-auto lg:overflow-x-visible gap-1 lg:space-y-1 pb-2 lg:pb-0">
             {[
               { id: 'track', icon: <Database size={16} />, label: 'Track' },
               { id: 'work', icon: <Activity size={16} />, label: 'Work' },
@@ -112,10 +95,10 @@ const BlueprintReviewPage: React.FC = () => {
             </div>
             <div>
               <h1 className="font-poppins text-3xl lg:text-[36px] font-bold text-[#0F766E] leading-tight mb-2">
-                Your AI-generated app blueprint is ready to review
+                The blueprint for <span className="text-slate-900">{project?.name || 'your project'}</span> is ready
               </h1>
               <p className="text-teal-900/70 text-lg max-w-3xl">
-                Read through each section below. Everything is written in plain language to ensure the automation matches your clinical needs perfectly.
+                Read through each section below. Everything is written in plain language to ensure the automation matches your needs perfectly.
               </p>
             </div>
           </div>
@@ -313,6 +296,12 @@ const BlueprintReviewPage: React.FC = () => {
               <ChevronDown size={18} className="text-teal-600" />
             </button>
             <div className="p-4 space-y-4 border-t border-slate-100">
+              <button 
+                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                className="w-full py-1.5 mb-2 text-[10px] font-bold text-teal-600 hover:text-teal-800 uppercase tracking-widest border border-dashed border-teal-200 rounded-lg hover:bg-teal-50 transition-all"
+              >
+                ← Back to Main Spec
+              </button>
               <div className="bg-white border border-teal-100 rounded-xl p-4 shadow-sm relative overflow-hidden group">
                 <div className="absolute top-0 left-0 w-1 h-full bg-teal-400"></div>
                 <h4 className="text-sm font-bold text-slate-800 mb-1">Add a Follow-up Date</h4>

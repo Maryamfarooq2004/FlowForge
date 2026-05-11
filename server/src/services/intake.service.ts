@@ -146,3 +146,49 @@ export const autoSaveGuidedScreenService = async (
   );
   // Do not advance progress on auto-save
 };
+
+// ── ASSEMBLE BUNDLE (Final Step) ──────────────────────────────
+
+export const assembleBundleService = async (
+  userId: string,
+  projectId: string
+) => {
+  console.log(`[IntakeService] Assembling bundle for project ${projectId} (User: ${userId})`);
+  const bundle = await IntakeBundle.findOne({ projectId, userId });
+  if (!bundle) {
+    console.error(`[IntakeService] Bundle NOT FOUND for project ${projectId}`);
+    throw new AppError('Intake bundle not found.', 404, 'NOT_FOUND');
+  }
+
+  // Simple assembly: just mark as assembled and record the time
+  bundle.isAssembled = true;
+  bundle.assembledAt = new Date();
+  
+  // Create a structured representation for the AI to read later
+  bundle.assembledBundle = {
+    domain: bundle.domain,
+    structuredForm: bundle.structuredFormData,
+    guidedScreens: bundle.guidedScreens.map(s => ({
+      step: s.screen,
+      title: ['Story', 'People', 'Data', 'Rules'][s.screen - 1],
+      content: s.content,
+      items: (s.confirmedItems && s.confirmedItems.length > 0) ? s.confirmedItems : (s.detectedItems || [])
+    }))
+  };
+
+  await bundle.save();
+  console.log(`[IntakeService] Bundle assembled successfully for project ${projectId}`);
+
+  // Update project progress
+  await Project.findOneAndUpdate(
+    { _id: projectId, userId },
+    {
+      status: 'SPEC_READY',
+      'progress.currentPhase': 'generating',
+      'progress.lastActiveScreen': `/project/${projectId}/spec`,
+      $addToSet: { 'progress.completedSteps': 'intake_review' }
+    }
+  );
+
+  return bundle;
+};
