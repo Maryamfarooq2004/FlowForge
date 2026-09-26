@@ -15,6 +15,8 @@ export interface IUser extends Document {
   refreshTokens: string[];
   passwordResetToken?: string;
   passwordResetTokenExpires?: Date;
+  emailVerificationToken?: string;
+  emailVerificationTokenExpires?: Date;
   lastLoginAt?: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -57,13 +59,15 @@ const userSchema = new Schema<IUser>(
     },
     businessName: { type: String, trim: true, default: '' },
     logoUrl: { type: String, default: null },
-    isEmailVerified: { type: Boolean, default: true },
+    isEmailVerified: { type: Boolean, default: false },
     role: { type: String, enum: ['user', 'admin'], default: 'user' },
     loginAttempts: { type: Number, default: 0 },
     lockUntil: { type: Date, default: null },
     refreshTokens: { type: [String], default: [], select: false },
     passwordResetToken: { type: String, select: false },
     passwordResetTokenExpires: { type: Date, select: false },
+    emailVerificationToken: { type: String, select: false },
+    emailVerificationTokenExpires: { type: Date, select: false },
     lastLoginAt: { type: Date },
   },
   {

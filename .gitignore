@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# User-uploaded runtime data / build logs (cleanup plan 0.2)
+server/uploads
+*_errors*.txt
+.gen-*-tmp/

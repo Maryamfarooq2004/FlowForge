@@ -38,6 +38,8 @@ export interface IIntakeBundle extends Document {
   structuredFormComplete: boolean;
   // Phase 2: Guided screens (4 screens)
   guidedScreens: IGuidedScreenData[];
+  // Module 3: confirmed items extracted+merged from uploaded documents
+  documentItems?: { roles: string[]; fields: string[]; rules: string[] };
   // Assembled bundle (built after all 4 screens complete)
   assembledBundle: Record<string, any> | null;
   isAssembled: boolean;
@@ -80,6 +82,7 @@ const intakeBundleSchema = new Schema<IIntakeBundle>(
     structuredFormData:     { type: Schema.Types.Mixed, default: {} },
     structuredFormComplete: { type: Boolean, default: false },
     guidedScreens:          { type: [guidedScreenSchema], default: [] },
+    documentItems:          { type: Schema.Types.Mixed, default: () => ({ roles: [], fields: [], rules: [] }) },
     assembledBundle:        { type: Schema.Types.Mixed, default: null },
     isAssembled:            { type: Boolean, default: false },
     assembledAt:            { type: Date },

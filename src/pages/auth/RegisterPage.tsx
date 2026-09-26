@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
-import authService from '../../services/authService';
-import { useAuthStore } from '../../store/authStore';
+import { useRegister } from '../../hooks/useAuth';
 import { toast } from 'react-hot-toast';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -27,8 +26,7 @@ const registerSchema = z.object({
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
 const RegisterPage: React.FC = () => {
-  const navigate = useNavigate();
-  const authStore = useAuthStore();
+  const registerMutation = useRegister();
   const [showPassword, setShowPassword] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState(0);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -61,15 +59,15 @@ const RegisterPage: React.FC = () => {
   const onSubmit = async (data: RegisterFormValues) => {
     try {
       setServerError(null);
-      const response = await authService.register({
-        ...data,
-        orgType: data.organizationType as any
+      // useRegister handles the soft-gate flow: stores tokens, sets auth, shows a
+      // welcome toast, and lands the user on /hub (where the verify-email banner
+      // prompts them to confirm their address).
+      await registerMutation.mutateAsync({
+        fullName: data.fullName,
+        email: data.email,
+        orgType: data.organizationType as any,
+        password: data.password,
       });
-      
-      if (response.data.success) {
-        toast.success('Account created! Please log in to continue.');
-        navigate('/login');
-      }
     } catch (err: any) {
       const code = err.response?.data?.code;
       const message = err.response?.data?.message || err.response?.data?.error || 'Registration failed.';

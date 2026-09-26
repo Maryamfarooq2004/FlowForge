@@ -1,9 +1,10 @@
-import { User } from '../models/User.model';
-
 declare global {
   namespace Express {
     interface Request {
-      user?: any; // Will refine this once User model is built
+      /** Set by `protect` from the verified access token. */
+      userId?: string;
+      /** Set by `requireRole` (RBAC) after loading the user. */
+      user?: any;
     }
   }
 }

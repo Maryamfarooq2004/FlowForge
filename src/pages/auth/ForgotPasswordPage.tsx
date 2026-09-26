@@ -8,6 +8,7 @@ import { AuthLayout } from '../../components/layout/AuthLayout';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useForgotPassword } from '../../hooks/useAuth';
 
 const forgotPasswordSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -20,6 +21,8 @@ export const ForgotPasswordPage: React.FC = () => {
   const [resendCount, setResendCount] = useState(0);
   const [submittedEmail, setSubmittedEmail] = useState('');
 
+  const forgotPassword = useForgotPassword();
+
   const {
     register,
     handleSubmit,
@@ -29,8 +32,8 @@ export const ForgotPasswordPage: React.FC = () => {
   });
 
   const onSubmit = async (data: ForgotPasswordFormValues) => {
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    // Always show the generic confirmation, even on error (don't reveal existence).
+    await forgotPassword.mutateAsync(data.email).catch(() => undefined);
     setSubmittedEmail(data.email);
     setIsSubmitted(true);
   };
@@ -38,6 +41,7 @@ export const ForgotPasswordPage: React.FC = () => {
   const handleResend = () => {
     if (resendCount >= 3) return;
     setResendCount((prev) => prev + 1);
+    forgotPassword.mutate(submittedEmail);
   };
 
   return (
@@ -112,7 +116,7 @@ export const ForgotPasswordPage: React.FC = () => {
               </h2>
               
               <p className="text-slate-600 mb-6 text-sm leading-relaxed">
-                A reset link has been sent to <span className="font-semibold text-slate-800">{submittedEmail}</span> — valid for 1 hour.
+                A reset link has been sent to <span className="font-semibold text-slate-800">{submittedEmail}</span> — valid for 15 minutes.
               </p>
 
               <div className="text-sm text-slate-500">

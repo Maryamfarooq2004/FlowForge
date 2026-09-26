@@ -24,6 +24,26 @@ const authService = {
 
   changePassword: (data: { currentPassword: string; newPassword: string }) =>
     axiosInstance.patch<ApiResponse<null>>('/auth/change-password', data),
+
+  forgotPassword: (email: string) =>
+    axiosInstance.post<ApiResponse<null>>('/auth/forgot-password', { email }),
+
+  resetPassword: (data: { token: string; newPassword: string }) =>
+    axiosInstance.post<ApiResponse<null>>('/auth/reset-password', data),
+
+  verifyEmail: (token: string) =>
+    axiosInstance.post<ApiResponse<{ user: User }>>('/auth/verify-email', { token }),
+
+  resendVerification: () =>
+    axiosInstance.post<ApiResponse<{ alreadyVerified: boolean }>>('/auth/resend-verification'),
+
+  uploadLogo: (file: File) => {
+    const form = new FormData();
+    form.append('logo', file);
+    return axiosInstance.post<ApiResponse<{ user: User }>>('/auth/logo', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
 };
 
 export default authService;

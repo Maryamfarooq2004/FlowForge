@@ -1,16 +1,74 @@
-import React, { useState } from 'react';
-import { Mail, Search, Lock, ChevronDown, ChevronUp, UploadCloud, Plus, CheckCircle2 } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Mail, Search, Lock, ChevronDown, ChevronUp, UploadCloud, CheckCircle2 } from 'lucide-react';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { cn } from '../../utils/classNames';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../../store/authStore';
+import { useUpdateProfile, useChangePassword, useUploadLogo, useResendVerification } from '../../hooks/useAuth';
+
+// Simple 0-4 password strength score for the meter.
+const scorePassword = (pw: string): number => {
+  let s = 0;
+  if (pw.length >= 8) s++;
+  if (/[A-Za-z]/.test(pw)) s++;
+  if (/[0-9]/.test(pw)) s++;
+  if (/[^A-Za-z0-9]/.test(pw)) s++;
+  return s;
+};
 
 const SettingsPage: React.FC = () => {
   const { user } = useAuthStore();
+  const updateProfile = useUpdateProfile();
+  const changePassword = useChangePassword();
+  const uploadLogo = useUploadLogo();
+  const resendVerification = useResendVerification();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) uploadLogo.mutate(file);
+    e.target.value = ''; // allow re-selecting the same file
+  };
+
   const [isPasswordOpen, setIsPasswordOpen] = useState(false);
-  const [passwordStrength, setPasswordStrength] = useState(85); // Mock strength
-  const [isEmailPending, setIsEmailPending] = useState(true); // Mock pending state
+  const isEmailUnverified = user?.isEmailVerified === false;
+
+  const [fullName, setFullName] = useState(user?.fullName || '');
+  const [businessName, setBusinessName] = useState(user?.businessName || '');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+
+  // Keep local fields in sync once the user profile loads/changes.
+  useEffect(() => {
+    setFullName(user?.fullName || '');
+    setBusinessName(user?.businessName || '');
+  }, [user?.fullName, user?.businessName]);
+
+  const passwordStrength = useMemo(() => scorePassword(newPassword), [newPassword]);
+
+  const isProfileDirty =
+    fullName.trim() !== (user?.fullName || '') ||
+    businessName.trim() !== (user?.businessName || '');
+
+  const handleSaveProfile = () => {
+    if (!isProfileDirty) return;
+    updateProfile.mutate({ fullName: fullName.trim(), businessName: businessName.trim() });
+  };
+
+  const handleChangePassword = () => {
+    if (!currentPassword || newPassword.length < 8) return;
+    changePassword.mutate(
+      { currentPassword, newPassword },
+      {
+        onSuccess: () => {
+          setCurrentPassword('');
+          setNewPassword('');
+          setIsPasswordOpen(false);
+        },
+      }
+    );
+  };
 
   return (
     <div className="pb-10">
@@ -33,9 +91,9 @@ const SettingsPage: React.FC = () => {
         {/* Left Column - Personal Info & Security */}
         <div className="lg:col-span-6 space-y-8">
           
-          {/* Pending Email Banner */}
+          {/* Email verification banner — driven by the real verified flag */}
           <AnimatePresence>
-            {isEmailPending && (
+            {isEmailUnverified && (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -46,15 +104,19 @@ const SettingsPage: React.FC = () => {
                   <Mail className="text-amber-600 h-6 w-6" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-semibold text-amber-800 text-sm">Email change pending verification</h3>
+                  <h3 className="font-semibold text-amber-800 text-sm">Email not verified</h3>
                   <p className="text-sm text-amber-700 leading-snug mt-0.5">
-                    We sent a link to <span className="font-semibold">{user?.email}</span> — click it to confirm.
+                    We sent a verification link to <span className="font-semibold">{user?.email}</span> — click it to confirm your address.
                   </p>
                 </div>
                 <div className="flex items-center space-x-2 shrink-0 self-end sm:self-auto">
-                  <button className="text-xs font-semibold text-amber-600 hover:text-amber-800">Resend</button>
-                  <span className="text-amber-200">|</span>
-                  <button onClick={() => setIsEmailPending(false)} className="text-xs font-semibold text-amber-600 hover:text-amber-800">Cancel</button>
+                  <button
+                    onClick={() => resendVerification.mutate()}
+                    disabled={resendVerification.isPending}
+                    className="text-xs font-semibold text-amber-600 hover:text-amber-800 disabled:opacity-50"
+                  >
+                    {resendVerification.isPending ? 'Sending…' : 'Resend'}
+                  </button>
                 </div>
               </motion.div>
             )}
@@ -63,20 +125,47 @@ const SettingsPage: React.FC = () => {
           <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
             <h2 className="text-xl font-semibold text-slate-800 font-poppins mb-6">Personal Information</h2>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-              <Input label="FULL NAME" defaultValue={user?.fullName || ''} />
-              <Input label="BUSINESS NAME" defaultValue={user?.businessName || user?.orgType || ''} />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              <Input
+                label="FULL NAME"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+              />
+              <Input
+                label="BUSINESS NAME"
+                placeholder="Your organization name"
+                value={businessName}
+                onChange={(e) => setBusinessName(e.target.value)}
+              />
               <div className="md:col-span-2 relative">
-                <Input 
-                  label={isEmailPending ? "CURRENT EMAIL" : "EMAIL ADDRESS"}
-                  defaultValue={user?.email || ''} 
-                  readOnly={isEmailPending}
-                  className={cn("pr-24", isEmailPending && "bg-slate-50")}
+                <Input
+                  label="EMAIL ADDRESS"
+                  defaultValue={user?.email || ''}
+                  readOnly
+                  className={cn('pr-24', 'bg-slate-50')}
                 />
-                <div className="absolute right-3 top-[34px] flex items-center bg-green-50 text-green-700 px-3 py-1 rounded-full text-[10px] font-bold">
-                  <CheckCircle2 size={12} className="mr-1" /> VERIFIED
-                </div>
+                {isEmailUnverified ? (
+                  <div className="absolute right-3 top-[34px] flex items-center bg-amber-50 text-amber-700 px-3 py-1 rounded-full text-[10px] font-bold">
+                    <Mail size={12} className="mr-1" /> UNVERIFIED
+                  </div>
+                ) : (
+                  <div className="absolute right-3 top-[34px] flex items-center bg-green-50 text-green-700 px-3 py-1 rounded-full text-[10px] font-bold">
+                    <CheckCircle2 size={12} className="mr-1" /> VERIFIED
+                  </div>
+                )}
               </div>
+            </div>
+
+            <div className="flex justify-end mb-8">
+              <Button
+                size="sm"
+                onClick={handleSaveProfile}
+                disabled={!isProfileDirty}
+                isLoading={updateProfile.isPending}
+                className="bg-[#0F766E] hover:bg-[#0D6B63] text-white"
+              >
+                Save Changes
+              </Button>
             </div>
 
             {/* Security Section */}
@@ -96,14 +185,37 @@ const SettingsPage: React.FC = () => {
                 {isPasswordOpen && (
                   <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden">
                     <div className="p-6 space-y-6 border-t border-slate-100">
-                      <Input label="CURRENT PASSWORD" type="password" placeholder="••••••••••••" />
+                      <Input
+                        label="CURRENT PASSWORD"
+                        type="password"
+                        placeholder="••••••••••••"
+                        value={currentPassword}
+                        onChange={(e) => setCurrentPassword(e.target.value)}
+                      />
                       <div className="space-y-2">
-                        <Input label="NEW PASSWORD" type="password" placeholder="••••••••••••" />
+                        <Input
+                          label="NEW PASSWORD"
+                          type="password"
+                          placeholder="At least 8 chars, with a letter and a number"
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                        />
                         <div className="h-1 w-full bg-slate-100 rounded-full">
-                          <div className="h-full bg-teal-500" style={{ width: '85%' }} />
+                          <div
+                            className="h-full bg-teal-500 transition-all"
+                            style={{ width: `${(passwordStrength / 4) * 100}%` }}
+                          />
                         </div>
                       </div>
-                      <Button variant="outline" size="sm">Update Password</Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleChangePassword}
+                        disabled={!currentPassword || newPassword.length < 8}
+                        isLoading={changePassword.isPending}
+                      >
+                        Update Password
+                      </Button>
                     </div>
                   </motion.div>
                 )}
@@ -159,12 +271,32 @@ const SettingsPage: React.FC = () => {
             <h2 className="text-xl font-semibold text-slate-800 font-poppins mb-6">Business Branding</h2>
             <div className="space-y-3 mb-8">
               <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">BRAND IDENTITY LOGO</label>
-              <div className="border-2 border-dashed border-slate-200 rounded-2xl p-10 flex flex-col items-center justify-center text-center cursor-pointer hover:border-[#0F766E] hover:bg-teal-50/30 transition-all group">
-                <div className="h-14 w-14 rounded-full bg-teal-50 flex items-center justify-center mb-4 text-[#34D399] group-hover:scale-110 transition-transform">
-                  <UploadCloud size={28} />
-                </div>
-                <p className="text-sm font-bold text-slate-700">Upload logo</p>
-                <p className="text-[10px] text-slate-400 mt-1">PNG/SVG max 5MB</p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                onChange={handleLogoChange}
+                className="hidden"
+              />
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className="border-2 border-dashed border-slate-200 rounded-2xl p-10 flex flex-col items-center justify-center text-center cursor-pointer hover:border-[#0F766E] hover:bg-teal-50/30 transition-all group"
+              >
+                {user?.logoUrl ? (
+                  <img
+                    src={user.logoUrl}
+                    alt="Business logo"
+                    className="h-16 w-16 object-contain mb-3 rounded-lg"
+                  />
+                ) : (
+                  <div className="h-14 w-14 rounded-full bg-teal-50 flex items-center justify-center mb-4 text-[#34D399] group-hover:scale-110 transition-transform">
+                    <UploadCloud size={28} />
+                  </div>
+                )}
+                <p className="text-sm font-bold text-slate-700">
+                  {uploadLogo.isPending ? 'Uploading…' : user?.logoUrl ? 'Replace logo' : 'Upload logo'}
+                </p>
+                <p className="text-[10px] text-slate-400 mt-1">PNG/JPG/SVG/WEBP max 5MB</p>
               </div>
             </div>
 

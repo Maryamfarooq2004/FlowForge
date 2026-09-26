@@ -1,309 +1,330 @@
-import React from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Logo } from '../../components/shared/Logo';
 import { Avatar } from '../../components/ui/Avatar';
 import { Button } from '../../components/ui/Button';
 import { cn } from '../../utils/classNames';
-import { 
-  Bell, 
-  HelpCircle,
-  CloudUpload,
-  FileSpreadsheet,
-  FileText,
-  Image as ImageIcon,
-  Trash2,
-  Sparkles,
-  AlertTriangle
+import {
+  Bell, HelpCircle, CloudUpload, FileSpreadsheet, FileText, Trash2, Sparkles,
+  Check, X, ImageOff,
 } from 'lucide-react';
+
+import { useAuthStore } from '../../store/authStore';
+import { useProject } from '../../hooks/useProjects';
+import { useDocuments, useUploadDocuments, useDeleteDocument, useMergeDocuments } from '../../hooks/useDocuments';
+import type { DocumentDTO } from '../../types/document.types';
+
+type Cat = 'roles' | 'fields' | 'rules';
+
+const uniqCI = (arr: string[]): string[] => {
+  const seen = new Map<string, string>();
+  for (const raw of arr) {
+    const v = (raw ?? '').trim();
+    if (!v) continue;
+    const k = v.toLowerCase();
+    if (!seen.has(k)) seen.set(k, v);
+  }
+  return [...seen.values()];
+};
+
+const statusBadge = (d: DocumentDTO) => {
+  if (d.status === 'failed') return { text: 'FAILED', cls: 'bg-red-50 text-red-600' };
+  if (d.status === 'merged') return { text: 'MERGED', cls: 'bg-teal-50 text-teal-700' };
+  return { text: 'ANALYZED', cls: 'bg-green-50 text-green-700' };
+};
 
 const DocumentExtractionPage: React.FC = () => {
   const navigate = useNavigate();
   const { projectId } = useParams();
+  const { user } = useAuthStore();
+  const { data: project } = useProject(projectId);
 
-  const handleMerge = () => {
-    navigate(`/project/${projectId || 'new'}/theme`);
+  const { data: documents = [], isLoading } = useDocuments(projectId);
+  const upload = useUploadDocuments(projectId);
+  const del = useDeleteDocument(projectId);
+  const merge = useMergeDocuments(projectId);
+
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [excluded, setExcluded] = useState<Set<string>>(new Set());
+
+  const parsed = documents.filter((d) => d.status !== 'failed');
+  const selected = documents.find((d) => d.id === selectedId) ?? parsed[0];
+
+  const aggregated = useMemo(
+    () => ({
+      fields: uniqCI(parsed.flatMap((d) => d.detected?.fields ?? [])),
+      roles: uniqCI(parsed.flatMap((d) => d.detected?.roles ?? [])),
+      rules: uniqCI(parsed.flatMap((d) => d.detected?.rules ?? [])),
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [documents]
+  );
+
+  const key = (cat: Cat, v: string) => cat + '::' + v.toLowerCase();
+  const isOn = (cat: Cat, v: string) => !excluded.has(key(cat, v));
+  const toggle = (cat: Cat, v: string) =>
+    setExcluded((prev) => {
+      const next = new Set(prev);
+      const k = key(cat, v);
+      if (next.has(k)) next.delete(k);
+      else next.add(k);
+      return next;
+    });
+  const chosen = (cat: Cat) => aggregated[cat].filter((v) => isOn(cat, v));
+  const totalChosen = chosen('fields').length + chosen('roles').length + chosen('rules').length;
+
+  const onFiles = (fileList: FileList | null) => {
+    const files = Array.from(fileList ?? []);
+    if (files.length) upload.mutate(files);
+    if (fileRef.current) fileRef.current.value = '';
+  };
+
+  const doMerge = () => {
+    if (!projectId) return;
+    merge.mutate(
+      { roles: chosen('roles'), fields: chosen('fields'), rules: chosen('rules') },
+      { onSuccess: () => navigate(`/project/${projectId}/intake/review`) }
+    );
+  };
+
+  const renderChips = (label: string, cat: Cat) => {
+    const items = aggregated[cat];
+    if (!items.length) return null;
+    return (
+      <div className="mb-5">
+        <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">
+          {label} ({chosen(cat).length}/{items.length})
+        </h4>
+        <div className="flex flex-wrap gap-2">
+          {items.map((v) => {
+            const on = isOn(cat, v);
+            return (
+              <button
+                key={v}
+                onClick={() => toggle(cat, v)}
+                className={cn(
+                  'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors',
+                  on
+                    ? 'bg-teal-50 border-teal-300 text-[#0F766E]'
+                    : 'bg-slate-50 border-slate-200 text-slate-400 line-through'
+                )}
+              >
+                {on ? <Check size={12} /> : <X size={12} />}
+                {v}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col overflow-hidden">
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col">
       {/* Header */}
-      <nav className="h-14 bg-[#134E4A] flex items-center justify-between px-6 shrink-0 z-50">
+      <nav className="h-14 bg-[#134E4A] flex items-center justify-between px-6 shrink-0 z-50 sticky top-0">
         <div className="flex items-center space-x-6">
           <Logo size="sm" variant="light" useSecondary={true} />
           <div className="h-4 w-[1px] bg-white/20" />
           <div className="flex items-center space-x-2 text-xs font-medium">
-            <span className="text-white/50">New Project</span>
+            <span className="text-white/50">Project: {project?.name || 'My Organization'}</span>
             <span className="text-white/30">&gt;</span>
-            <span className="text-white">Documents Extraction</span>
+            <span className="text-white">Documents</span>
           </div>
         </div>
-
-        <div className="hidden md:flex items-center space-x-8">
-          <button className="text-sm font-bold text-white border-b-2 border-white pb-1 mt-1">Documents</button>
-          <button className="text-sm font-bold text-white/40 hover:text-white/70 transition-colors pb-1 mt-1 border-b-2 border-transparent">Insights</button>
-          <button className="text-sm font-bold text-white/40 hover:text-white/70 transition-colors pb-1 mt-1 border-b-2 border-transparent">Settings</button>
-        </div>
-
         <div className="flex items-center space-x-4">
-          <button className="text-white/70 hover:text-white">
+          <button onClick={() => navigate('/hub/notifications')} className="text-white/70 hover:text-white">
             <Bell size={20} />
           </button>
-          <button className="text-white/70 hover:text-white">
+          <button onClick={() => navigate('/hub/support')} className="text-white/70 hover:text-white">
             <HelpCircle size={20} />
           </button>
-          <Avatar name="Maryam Farooq" size="sm" className="bg-[#34D399] text-[#134E4A]" />
+          <Avatar name={user?.fullName || 'User'} size="sm" className="bg-[#34D399] text-[#134E4A]" />
         </div>
       </nav>
 
-      {/* Main Content */}
-      <main className="flex-1 overflow-y-auto p-12">
+      <main className="flex-1 overflow-y-auto p-8 lg:p-12 pb-28">
         <div className="max-w-[1400px] mx-auto space-y-8">
-          
           <div>
-            <h1 className="text-[28px] font-bold text-slate-900 font-poppins leading-tight mb-2">Upload Existing Documents (Optional)</h1>
+            <h1 className="text-[28px] font-bold text-slate-900 font-poppins leading-tight mb-2">
+              Upload Existing Documents (Optional)
+            </h1>
             <p className="text-slate-500 font-inter">
-              Upload any Excel registers, process PDFs, or flowchart images you already use — we will extract the structure automatically.
+              Upload Excel registers, CSV exports, or process PDFs you already use — we extract the columns and detect
+              candidate fields, roles, and rules. Confirm what you want and merge it into your intake.
             </p>
           </div>
 
           <div className="flex flex-col lg:flex-row gap-8">
-            
-            {/* Left Panel: Upload */}
+            {/* Left: upload + file list */}
             <div className="w-full lg:w-[40%] space-y-6">
               <h2 className="font-semibold text-slate-800 text-lg">Upload Files</h2>
-              
-              {/* Dropzone */}
-              <div className="border-2 border-dashed border-teal-400 rounded-2xl p-10 text-center bg-teal-50/30 cursor-pointer hover:border-teal-500 hover:bg-teal-50 transition-all group">
+
+              <input
+                ref={fileRef}
+                type="file"
+                multiple
+                accept=".xlsx,.xls,.csv,.pdf"
+                className="hidden"
+                onChange={(e) => onFiles(e.target.files)}
+              />
+              <div
+                onClick={() => fileRef.current?.click()}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  onFiles(e.dataTransfer.files);
+                }}
+                className="border-2 border-dashed border-teal-400 rounded-2xl p-10 text-center bg-teal-50/30 cursor-pointer hover:border-teal-500 hover:bg-teal-50 transition-all group"
+              >
                 <div className="w-16 h-16 mx-auto bg-teal-100 text-teal-600 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                   <CloudUpload size={32} />
                 </div>
                 <p className="text-[#0F766E] font-medium mb-1">
-                  Drag & drop Excel, PDF, or image files here <span className="underline decoration-teal-300">or Browse Files</span>
+                  {upload.isPending ? 'Analyzing…' : 'Drag & drop or '}
+                  {!upload.isPending && <span className="underline decoration-teal-300">Browse Files</span>}
                 </p>
-                <p className="text-xs text-slate-400">Max 10 MB per file • xlsx, xls, pdf, png, jpg</p>
+                <p className="text-xs text-slate-400">Excel (.xlsx/.xls), CSV, or PDF · up to 5 files</p>
               </div>
 
-              {/* File List */}
+              <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-3 flex items-start gap-2.5 text-xs text-slate-500">
+                <ImageOff size={16} className="text-slate-400 shrink-0 mt-0.5" />
+                Image / diagram OCR (scanned forms, flowcharts) is coming soon — for now, use searchable PDFs or spreadsheets.
+              </div>
+
               <div className="space-y-3">
-                {/* File 1 */}
-                <div className="bg-white rounded-xl border border-slate-200 px-4 py-3 flex items-center justify-between shadow-sm">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 rounded-lg bg-green-100 text-green-600 flex items-center justify-center shrink-0">
-                      <FileSpreadsheet size={20} />
+                {isLoading && <p className="text-sm text-slate-400">Loading…</p>}
+                {!isLoading && documents.length === 0 && (
+                  <p className="text-sm text-slate-400">No documents uploaded yet.</p>
+                )}
+                {documents.map((d) => {
+                  const badge = statusBadge(d);
+                  const Icon = d.type === 'pdf' ? FileText : FileSpreadsheet;
+                  const active = selected?.id === d.id;
+                  return (
+                    <div
+                      key={d.id}
+                      onClick={() => setSelectedId(d.id)}
+                      className={cn(
+                        'bg-white rounded-xl border px-4 py-3 flex items-center justify-between shadow-sm cursor-pointer transition-colors',
+                        active ? 'border-teal-400 ring-1 ring-teal-200' : 'border-slate-200 hover:border-slate-300'
+                      )}
+                    >
+                      <div className="flex items-center space-x-3 min-w-0">
+                        <div className={cn('w-10 h-10 rounded-lg flex items-center justify-center shrink-0', d.type === 'pdf' ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600')}>
+                          <Icon size={20} />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-medium text-slate-800 text-sm truncate">{d.originalName}</p>
+                          <p className="text-xs text-slate-400">{Math.max(1, Math.round(d.size / 1024))} KB</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-3 shrink-0">
+                        <div className={cn('px-2.5 py-1 rounded-md text-[10px] font-bold tracking-wider', badge.cls)}>{badge.text}</div>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); del.mutate(d.id); }}
+                          className="text-slate-300 hover:text-red-500 transition-colors"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-medium text-slate-800 text-sm">patient_register.xlsx</p>
-                      <p className="text-xs text-slate-400">340KB</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-4">
-                    <div className="bg-green-50 text-green-700 px-2.5 py-1 rounded-md text-[10px] font-bold tracking-wider">ANALYZED</div>
-                    <button className="text-slate-300 hover:text-red-500 transition-colors"><Trash2 size={16} /></button>
-                  </div>
-                </div>
-
-                {/* File 2 */}
-                <div className="bg-white rounded-xl border border-slate-200 px-4 py-3 flex items-center justify-between shadow-sm">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 rounded-lg bg-red-100 text-red-600 flex items-center justify-center shrink-0">
-                      <FileText size={20} />
-                    </div>
-                    <div>
-                      <p className="font-medium text-slate-800 text-sm">clinic_process.pdf</p>
-                      <p className="text-xs text-slate-400">1.2MB</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-4">
-                    <div className="bg-amber-50 text-amber-600 px-2.5 py-1 rounded-md text-[10px] font-bold tracking-wider animate-pulse flex items-center space-x-1">
-                      <Sparkles size={10} />
-                      <span>EXTRACTING...</span>
-                    </div>
-                    <button className="text-slate-300 hover:text-red-500 transition-colors"><Trash2 size={16} /></button>
-                  </div>
-                </div>
-
-                {/* File 3 */}
-                <div className="bg-white rounded-xl border border-slate-200 px-4 py-3 flex items-center justify-between shadow-sm">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 rounded-lg bg-slate-100 text-slate-500 flex items-center justify-center shrink-0">
-                      <ImageIcon size={20} />
-                    </div>
-                    <div>
-                      <p className="font-medium text-slate-800 text-sm">flow_diagram.png</p>
-                      <p className="text-xs text-slate-400">890KB</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-4">
-                    <div className="bg-slate-100 text-slate-500 px-2.5 py-1 rounded-md text-[10px] font-bold tracking-wider">PENDING</div>
-                    <button className="text-slate-300 hover:text-red-500 transition-colors"><Trash2 size={16} /></button>
-                  </div>
-                </div>
+                  );
+                })}
               </div>
             </div>
 
-            {/* Right Panel: Extraction Review */}
+            {/* Right: extraction review */}
             <div className="w-full lg:w-[60%] space-y-6">
               <h2 className="font-semibold text-slate-800 text-lg">Extraction Review</h2>
-              
-              <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-                
-                {/* Preview Table */}
-                <div className="border-b border-slate-200">
-                  <div className="bg-slate-50 px-6 py-3 border-b border-slate-200 flex items-center justify-between">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">PATIENT_REGISTER.XLSX (PREVIEW)</span>
-                    <div className="flex space-x-1">
-                      <div className="w-2 h-2 rounded-full bg-slate-300"></div>
-                      <div className="w-2 h-2 rounded-full bg-slate-300"></div>
+
+              {!selected ? (
+                <div className="bg-white border border-dashed border-slate-200 rounded-2xl p-12 text-center text-slate-400">
+                  Upload a document to see its extracted structure here.
+                </div>
+              ) : (
+                <>
+                  {/* Preview of the selected document */}
+                  <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+                    <div className="bg-slate-50 px-6 py-3 border-b border-slate-200 flex items-center justify-between">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest truncate">
+                        {selected.originalName} (preview)
+                      </span>
                     </div>
+                    {selected.error ? (
+                      <div className="p-6 text-sm text-red-600">Could not parse this file: {selected.error}</div>
+                    ) : selected.type === 'pdf' ? (
+                      <div className="p-6 text-sm text-slate-600 whitespace-pre-wrap max-h-64 overflow-y-auto">
+                        {selected.extraction?.snippet || '(no extractable text — is this a scanned PDF?)'}
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        {(() => {
+                          const sheet = selected.extraction?.sheets?.[0];
+                          if (!sheet || sheet.columns.length === 0)
+                            return <div className="p-6 text-sm text-slate-400">No tabular data found.</div>;
+                          return (
+                            <table className="w-full text-sm text-left">
+                              <thead className="bg-white text-slate-500 border-b border-slate-100">
+                                <tr>{sheet.columns.map((c) => <th key={c} className="px-6 py-3 font-medium whitespace-nowrap">{c}</th>)}</tr>
+                              </thead>
+                              <tbody className="text-slate-700 divide-y divide-slate-50">
+                                {sheet.sampleRows.slice(0, 4).map((row, i) => (
+                                  <tr key={i} className={i % 2 ? 'bg-slate-50/50' : ''}>
+                                    {sheet.columns.map((c) => <td key={c} className="px-6 py-3 whitespace-nowrap">{String(row[c] ?? '')}</td>)}
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          );
+                        })()}
+                      </div>
+                    )}
                   </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left">
-                      <thead className="bg-white text-slate-500 border-b border-slate-100">
-                        <tr>
-                          <th className="px-6 py-3 font-medium">Patient Name</th>
-                          <th className="px-6 py-3 font-medium">Phone</th>
-                          <th className="px-6 py-3 font-medium">Date</th>
-                          <th className="px-6 py-3 font-medium">Diagnosis</th>
-                        </tr>
-                      </thead>
-                      <tbody className="text-slate-700 divide-y divide-slate-50">
-                        <tr>
-                          <td className="px-6 py-3">Maryam Farooq</td>
-                          <td className="px-6 py-3">+1 555-0123</td>
-                          <td className="px-6 py-3">2023-11-24</td>
-                          <td className="px-6 py-3">Hypertension</td>
-                        </tr>
-                        <tr className="bg-slate-50/50">
-                          <td className="px-6 py-3">David Chen</td>
-                          <td className="px-6 py-3">+1 555-0199</td>
-                          <td className="px-6 py-3">2023-11-25</td>
-                          <td className="px-6 py-3">Type II Diabetes</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
 
-                {/* Extraction Results */}
-                <div className="p-6">
-                  <table className="w-full text-sm text-left">
-                    <thead className="text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-100">
-                      <tr>
-                        <th className="pb-3 w-1/4">ENTITY</th>
-                        <th className="pb-3 w-1/4">EXTRACTED VALUE</th>
-                        <th className="pb-3 w-1/4">CONFIDENCE</th>
-                        <th className="pb-3 w-1/4 text-right">ACTION</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-50">
-                      <tr>
-                        <td className="py-4 font-semibold text-slate-800">Patient Name</td>
-                        <td className="py-4 text-slate-600">Maryam Farooq</td>
-                        <td className="py-4">
-                          <div className="flex items-center space-x-2">
-                            <div className="w-24 h-2 bg-slate-100 rounded-full overflow-hidden">
-                              <div className="h-full bg-[#0F766E] w-[94%]"></div>
-                            </div>
-                            <span className="text-xs font-bold text-[#0F766E]">94%</span>
-                          </div>
-                        </td>
-                        <td className="py-4 text-right space-x-3">
-                          <button className="text-[#0F766E] font-semibold hover:underline">Confirm</button>
-                          <span className="text-slate-300">|</span>
-                          <button className="text-slate-400 hover:text-slate-600">Discard</button>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td className="py-4 font-semibold text-slate-800">Phone Number</td>
-                        <td className="py-4 text-slate-600">+1 555-0123</td>
-                        <td className="py-4">
-                          <div className="flex items-center space-x-2">
-                            <div className="w-24 h-2 bg-slate-100 rounded-full overflow-hidden">
-                              <div className="h-full bg-[#0F766E] w-[91%]"></div>
-                            </div>
-                            <span className="text-xs font-bold text-[#0F766E]">91%</span>
-                          </div>
-                        </td>
-                        <td className="py-4 text-right space-x-3">
-                          <button className="text-[#0F766E] font-semibold hover:underline">Confirm</button>
-                          <span className="text-slate-300">|</span>
-                          <button className="text-slate-400 hover:text-slate-600">Discard</button>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td className="py-4 font-semibold text-slate-800">Appointment Date</td>
-                        <td className="py-4 text-slate-600">2023-11-24</td>
-                        <td className="py-4">
-                          <div className="flex items-center space-x-2">
-                            <div className="w-24 h-2 bg-slate-100 rounded-full overflow-hidden">
-                              <div className="h-full bg-emerald-500 w-[87%]"></div>
-                            </div>
-                            <span className="text-xs font-bold text-emerald-600">87%</span>
-                          </div>
-                        </td>
-                        <td className="py-4 text-right space-x-3">
-                          <button className="text-[#0F766E] font-semibold hover:underline">Confirm</button>
-                          <span className="text-slate-300">|</span>
-                          <button className="text-slate-400 hover:text-slate-600">Discard</button>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td className="py-4 font-semibold text-slate-800">Diagnosis</td>
-                        <td className="py-4 text-slate-600">Hypertension</td>
-                        <td className="py-4">
-                          <div className="flex items-center space-x-2">
-                            <div className="w-24 h-2 bg-slate-100 rounded-full overflow-hidden">
-                              <div className="h-full bg-amber-400 w-[68%]"></div>
-                            </div>
-                            <span className="text-xs font-bold text-amber-600">68%</span>
-                          </div>
-                        </td>
-                        <td className="py-4 text-right">
-                          <div className="inline-flex items-center space-x-1.5 bg-amber-50 text-amber-700 px-3 py-1.5 rounded-lg text-xs font-bold border border-amber-200">
-                            <AlertTriangle size={14} />
-                            <span>Review</span>
-                          </div>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Conflict Alert */}
-              <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 shadow-sm">
-                <div className="flex items-start space-x-3">
-                  <AlertTriangle size={20} className="text-amber-500 shrink-0 mt-0.5" />
-                  <div>
-                    <h4 className="font-semibold text-amber-800 text-sm">1 conflict detected</h4>
-                    <p className="text-sm text-amber-700/80 mt-1 mb-4">Patient Name was already captured in your intake. Choose which to keep.</p>
-                    <div className="flex space-x-3">
-                      <button className="px-4 py-2 bg-white border border-amber-200 text-amber-700 rounded-lg text-sm font-bold hover:bg-amber-50 transition-colors">
-                        Keep Intake Version
-                      </button>
-                      <button className="px-4 py-2 bg-amber-500 text-white rounded-lg text-sm font-bold shadow-md shadow-amber-500/20 hover:bg-amber-600 transition-colors">
-                        Use Document Version
-                      </button>
+                  {/* Detected items to confirm */}
+                  <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Sparkles size={16} className="text-[#0F766E]" />
+                      <h3 className="font-semibold text-slate-800 text-sm">Detected across your documents — pick what to keep</h3>
                     </div>
+                    {aggregated.fields.length + aggregated.roles.length + aggregated.rules.length === 0 ? (
+                      <p className="text-sm text-slate-400">Nothing detected yet. Excel/CSV column headers become candidate fields.</p>
+                    ) : (
+                      <>
+                        {renderChips('Fields (from columns)', 'fields')}
+                        {renderChips('Roles', 'roles')}
+                        {renderChips('Rules', 'rules')}
+                      </>
+                    )}
                   </div>
-                </div>
-              </div>
-
+                </>
+              )}
             </div>
           </div>
-
-          <div className="pt-8 flex justify-center">
-            <Button 
-              onClick={handleMerge}
-              className="h-14 px-12 rounded-2xl bg-gradient-to-r from-[#0F766E] to-[#14B8A6] text-white text-lg font-bold flex items-center space-x-3 shadow-xl shadow-teal-900/10 transition-transform active:scale-[0.98] w-full max-w-[800px] justify-center"
-            >
-              <span>Merge into IntakeBundle</span>
-              <Sparkles size={20} />
-            </Button>
-          </div>
-
         </div>
       </main>
+
+      {/* Footer */}
+      <div className="w-full bg-white border-t border-slate-200 px-8 py-4 sticky bottom-0 z-40">
+        <div className="max-w-[1400px] mx-auto flex items-center justify-between">
+          <button
+            onClick={() => navigate(`/project/${projectId}/intake/review`)}
+            className="text-sm font-bold text-slate-500 hover:text-slate-800 transition-colors"
+          >
+            Skip / Back to Review
+          </button>
+          <Button
+            onClick={doMerge}
+            disabled={totalChosen === 0 || merge.isPending}
+            className="h-12 px-6 rounded-xl bg-gradient-to-r from-[#0F766E] to-[#14B8A6] text-white font-bold flex items-center gap-2 shadow-lg shadow-teal-900/10"
+          >
+            <span>{merge.isPending ? 'Merging…' : `Merge ${totalChosen} item${totalChosen === 1 ? '' : 's'} into Intake`}</span>
+            <Sparkles size={18} />
+          </Button>
+        </div>
+      </div>
     </div>
   );
 };

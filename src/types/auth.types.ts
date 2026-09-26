@@ -5,8 +5,10 @@ export interface User {
   fullName: string;
   email: string;
   orgType: OrgType;
+  role?: 'user' | 'admin';
   businessName?: string;
   logoUrl?: string;
+  isEmailVerified?: boolean;
   createdAt: string;
   updatedAt: string;
 }

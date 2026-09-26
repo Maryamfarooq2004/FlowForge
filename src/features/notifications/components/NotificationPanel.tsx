@@ -1,81 +1,34 @@
 import React, { useState } from 'react';
-import { X, Bell, Settings, CheckCheck } from 'lucide-react';
+import { X, Bell, CheckCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Link, useNavigate } from 'react-router-dom';
 import { cn } from '../../../utils/classNames';
-import { Link } from 'react-router-dom';
+import { timeAgo } from '../../../utils/timeAgo';
+import { useNotifications, useMarkAllRead, useMarkRead } from '../../../hooks/useNotifications';
+import type { AppNotification, NotificationType } from '../../../types/notification.types';
 
-interface Notification {
-  id: string;
-  type: 'generation' | 'deployment' | 'error' | 'system' | 'email';
-  title: string;
-  body: string;
-  timestamp: string;
-  isRead: boolean;
-}
-
-const MOCK_NOTIFICATIONS: Notification[] = [
-  {
-    id: '1',
-    type: 'generation',
-    title: 'My Organization — Generation complete',
-    body: 'Your application is ready to preview. Code generation completed in 6m 42s.',
-    timestamp: '2 hours ago',
-    isRead: false,
-  },
-  {
-    id: '2',
-    type: 'deployment',
-    title: 'LMS Dashboard — Preview deployed',
-    body: 'Your preview environment is live at lms.preview.flowforge.app.',
-    timestamp: '5 hours ago',
-    isRead: false,
-  },
-  {
-    id: '3',
-    type: 'error',
-    title: 'Patient Portal — LLM extraction timeout',
-    body: 'The extraction failed due to a temporary API timeout. Please retry.',
-    timestamp: '1 day ago',
-    isRead: true,
-  },
-  {
-    id: '4',
-    type: 'email',
-    title: 'Email verification resent to user@...',
-    body: 'A new verification link was sent to user@company.com.',
-    timestamp: '2 days ago',
-    isRead: true,
-  },
-  {
-    id: '5',
-    type: 'system',
-    title: 'FlowForge platform update v2.4',
-    body: 'New features: Blueprint Review Studio improvements and faster generation.',
-    timestamp: '3 days ago',
-    isRead: true,
-  },
-];
-
-const typeConfig = {
-  generation: { bg: 'bg-teal-100', emoji: '⚙️' },
-  deployment: { bg: 'bg-blue-100', emoji: '🚀' },
-  error: { bg: 'bg-red-100', emoji: '⚠️' },
-  system: { bg: 'bg-slate-100', emoji: '🔔' },
-  email: { bg: 'bg-purple-100', emoji: '📧' },
+const typeConfig: Record<NotificationType, { bg: string; emoji: string }> = {
+  SPEC_READY: { bg: 'bg-indigo-100', emoji: '📋' },
+  SPEC_APPROVED: { bg: 'bg-teal-100', emoji: '✅' },
+  GENERATION_STARTED: { bg: 'bg-slate-100', emoji: '⚙️' },
+  GENERATION_COMPLETED: { bg: 'bg-teal-100', emoji: '🎉' },
+  GENERATION_FAILED: { bg: 'bg-red-100', emoji: '⚠️' },
+  EXPORT_READY: { bg: 'bg-blue-100', emoji: '📦' },
+  DEPLOY_LIVE: { bg: 'bg-emerald-100', emoji: '🚀' },
 };
 
-type FilterTab = 'All' | 'Unread' | 'System';
+type FilterTab = 'All' | 'Unread';
 
 interface NotificationItemProps {
-  notification: Notification;
-  onRead: (id: string) => void;
+  notification: AppNotification;
+  onOpen: (n: AppNotification) => void;
 }
 
-const NotificationItem: React.FC<NotificationItemProps> = ({ notification, onRead }) => {
-  const config = typeConfig[notification.type];
+const NotificationItem: React.FC<NotificationItemProps> = ({ notification, onOpen }) => {
+  const config = typeConfig[notification.type] ?? { bg: 'bg-slate-100', emoji: '🔔' };
   return (
     <div
-      onClick={() => onRead(notification.id)}
+      onClick={() => onOpen(notification)}
       className={cn(
         'flex items-start gap-3 p-4 cursor-pointer border-l-2 transition-colors group',
         notification.isRead
@@ -89,11 +42,9 @@ const NotificationItem: React.FC<NotificationItemProps> = ({ notification, onRea
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-slate-800 leading-snug">{notification.title}</p>
         <p className="text-xs text-slate-500 mt-1 leading-relaxed">{notification.body}</p>
-        <p className="text-xs text-slate-400 mt-2">{notification.timestamp}</p>
+        <p className="text-xs text-slate-400 mt-2">{timeAgo(notification.createdAt)}</p>
       </div>
-      {!notification.isRead && (
-        <div className="w-2 h-2 bg-[#0F766E] rounded-full mt-1.5 shrink-0" />
-      )}
+      {!notification.isRead && <div className="w-2 h-2 bg-[#0F766E] rounded-full mt-1.5 shrink-0" />}
     </div>
   );
 };
@@ -104,30 +55,28 @@ interface NotificationPanelProps {
 }
 
 export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, onClose }) => {
-  const [notifications, setNotifications] = useState<Notification[]>(MOCK_NOTIFICATIONS);
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<FilterTab>('All');
+  const { data, isLoading } = useNotifications(isOpen);
+  const markRead = useMarkRead();
+  const markAllRead = useMarkAllRead();
 
-  const markAllRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+  const notifications = data?.notifications ?? [];
+  const unreadCount = data?.unreadCount ?? notifications.filter((n) => !n.isRead).length;
+  const filtered = activeTab === 'Unread' ? notifications.filter((n) => !n.isRead) : notifications;
+
+  const openNotification = (n: AppNotification) => {
+    if (!n.isRead) markRead.mutate(n.id);
+    if (n.link) {
+      navigate(n.link);
+      onClose();
+    }
   };
-
-  const markRead = (id: string) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
-  };
-
-  const filtered = notifications.filter(n => {
-    if (activeTab === 'Unread') return !n.isRead;
-    if (activeTab === 'System') return n.type === 'system';
-    return true;
-  });
-
-  const unreadCount = notifications.filter(n => !n.isRead).length;
 
   return (
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -136,7 +85,6 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, on
             className="fixed inset-0 z-40 bg-black/20 backdrop-blur-[1px]"
           />
 
-          {/* Panel */}
           <motion.div
             initial={{ x: 320, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
@@ -172,8 +120,9 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, on
                 </div>
               </div>
               <button
-                onClick={markAllRead}
-                className="text-xs font-semibold text-[#0F766E] hover:underline flex items-center gap-1"
+                onClick={() => markAllRead.mutate()}
+                disabled={unreadCount === 0 || markAllRead.isPending}
+                className="text-xs font-semibold text-[#0F766E] hover:underline flex items-center gap-1 disabled:opacity-40 disabled:no-underline"
               >
                 <CheckCheck size={12} />
                 Mark all as read
@@ -182,7 +131,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, on
 
             {/* Filter tabs */}
             <div className="flex border-b border-slate-100 shrink-0">
-              {(['All', 'Unread', 'System'] as FilterTab[]).map(tab => (
+              {(['All', 'Unread'] as FilterTab[]).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
@@ -198,31 +147,19 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, on
               ))}
             </div>
 
-            {/* Notifications list */}
+            {/* List */}
             <div className="flex-1 overflow-y-auto divide-y divide-slate-50">
-              {filtered.length === 0 ? (
+              {isLoading ? (
+                <div className="flex items-center justify-center h-40 text-sm text-slate-400">Loading…</div>
+              ) : filtered.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full py-16 text-center px-6">
                   <Bell size={48} className="text-slate-200 mb-4" />
                   <p className="text-slate-500 font-semibold text-sm">All caught up!</p>
                   <p className="text-slate-400 text-xs mt-1">No new notifications.</p>
                 </div>
               ) : (
-                filtered.map(n => (
-                  <NotificationItem key={n.id} notification={n} onRead={markRead} />
-                ))
+                filtered.map((n) => <NotificationItem key={n.id} notification={n} onOpen={openNotification} />)
               )}
-            </div>
-
-            {/* Footer */}
-            <div className="p-3 border-t border-slate-100 shrink-0">
-              <Link
-                to="/hub/settings"
-                onClick={onClose}
-                className="flex items-center gap-2 text-xs text-slate-400 hover:text-slate-600 transition-colors"
-              >
-                <Settings size={13} />
-                Notification preferences
-              </Link>
             </div>
           </motion.div>
         </>

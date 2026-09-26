@@ -1,0 +1,9 @@
+node_modules
+dist
+.env
+
+# Code-generation runtime output (per-run emitted app workspaces)
+generated-workspaces
+# Temp dir used by the emitted-backend compile test
+.gen-compile-tmp
+.gen-runtime-tmp

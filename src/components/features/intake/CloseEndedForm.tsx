@@ -26,6 +26,11 @@ interface Question {
   noLabel?: string;
 }
 
+const isAnswered = (val: any): boolean => {
+  if (Array.isArray(val)) return val.length > 0;
+  return val !== undefined && val !== '' && val !== null;
+};
+
 interface CloseEndedFormProps {
   projectId: string;
   category: 'clinic' | 'school';
@@ -59,12 +64,12 @@ export const CloseEndedForm: React.FC<CloseEndedFormProps> = ({
 
   // Auto-save logic
   const saveMutation = useMutation({
-    mutationFn: (data: Record<string, any>) => (intakeService as any).saveStructuredForm(projectId, data),
+    mutationFn: (data: Record<string, any>) => intakeService.saveStructuredForm(projectId, data),
     onSuccess: () => {
       setLastSaved(new Date());
       setIsDirty(false);
       queryClient.invalidateQueries({ queryKey: ['project', projectId] });
-      queryClient.invalidateQueries({ queryKey: ['intakeBundle', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['intake', projectId, 'bundle'] });
     }
   });
 
@@ -113,20 +118,41 @@ export const CloseEndedForm: React.FC<CloseEndedFormProps> = ({
 
   const currentQuestions = questions.filter(q => q.section === activeSection);
 
+  // FE2.3 — every REQUIRED question must be answered before finishing.
+  const missingRequired = useMemo(
+    () => questions.filter(q => q.required && !isAnswered(formValues[q.id])),
+    [formValues, questions]
+  );
+  const [showErrors, setShowErrors] = useState(false);
+
   const handleNext = async () => {
     const currentIndex = sections.indexOf(activeSection);
     if (currentIndex < sections.length - 1) {
       setActiveSection(sections[currentIndex + 1]);
       window.scrollTo({ top: 0, behavior: 'smooth' });
-    } else {
-      // Final Submit
-      try {
-        await saveMutation.mutateAsync(formValues);
-        toast.success('Form saved successfully!');
-        navigate(`/project/${projectId}/intake/story`);
-      } catch (error) {
-        toast.error('Failed to save form. Please try again.');
+      return;
+    }
+    // Final Submit — gate on required coverage.
+    if (missingRequired.length > 0) {
+      setShowErrors(true);
+      // Jump to the first section that still has a missing required answer.
+      setActiveSection(missingRequired[0].section);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      toast.error(`Please answer all required questions (${missingRequired.length} remaining).`);
+      return;
+    }
+    try {
+      const result = await saveMutation.mutateAsync(formValues);
+      if (!result.complete) {
+        // Server disagrees (belt-and-braces) — keep the user on the form.
+        setShowErrors(true);
+        toast.error('Some required questions are still missing.');
+        return;
       }
+      toast.success('Form saved successfully!');
+      navigate(`/project/${projectId}/intake/story`);
+    } catch (error) {
+      toast.error('Failed to save form. Please try again.');
     }
   };
 
@@ -221,6 +247,9 @@ export const CloseEndedForm: React.FC<CloseEndedFormProps> = ({
                     {q.required && <span className="text-red-500 ml-1">*</span>}
                   </span>
                 </label>
+                {showErrors && q.required && !isAnswered(formValues[q.id]) && (
+                  <p className="text-xs text-red-500 font-medium -mt-2">This question is required.</p>
+                )}
 
                 {q.type === 'text' && (
                   <input
