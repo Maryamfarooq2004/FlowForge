@@ -171,7 +171,16 @@ const AppPreviewPage: React.FC = () => {
             )}
 
             {state && meta && previewMode === 'login' && (
-              <GeneratedAppLogin appName={appName} appTheme="teal" roles={meta.roles.map((r) => r.name)} />
+              <GeneratedAppLogin
+                appName={appName}
+                appTheme="teal"
+                roles={meta.roles}
+                activeRoleKey={state.activeRoleKey}
+                isSwitching={setRole.isPending}
+                onLogin={(roleKey) => {
+                  setRole.mutate(roleKey, { onSuccess: () => setPreviewMode('app') });
+                }}
+              />
             )}
             {state && meta && previewMode === 'app' && <PreviewRuntime projectId={projectId!} state={state} />}
           </div>

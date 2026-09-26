@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BookOpen, MessageCircle, Mail, ChevronDown, Paperclip, CheckCircle2 } from 'lucide-react';
+import { BookOpen, MessageCircle, Mail, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '../../components/ui/Button';
 import { cn } from '../../utils/classNames';
@@ -7,7 +7,7 @@ import { cn } from '../../utils/classNames';
 const FAQ_ITEMS = [
   {
     q: 'How long does it take to generate an application?',
-    a: 'The full pipeline — schema, APIs, frontend, and deployment — typically completes in 5–10 minutes for a standard 5–8 entity workflow.',
+    a: 'The full pipeline — schema, APIs, frontend, and deployment config — typically completes in 5–10 minutes for a standard 5–8 entity workflow.',
   },
   {
     q: 'Can I edit the generated code after downloading?',
@@ -15,7 +15,7 @@ const FAQ_ITEMS = [
   },
   {
     q: 'What file types can I upload for workflow extraction?',
-    a: 'Excel (.xlsx, .xls), PDF documents, and image files (.png, .jpg, .jpeg) up to 10 MB each.',
+    a: 'Excel (.xlsx, .xls), CSV, and PDF documents, up to 10 MB each. Image uploads (screenshots, diagrams) aren\'t supported yet.',
   },
   {
     q: 'Why did my AI extraction fail?',
@@ -27,7 +27,7 @@ const FAQ_ITEMS = [
   },
   {
     q: 'How do I connect my custom domain?',
-    a: 'From the Deployment Hub, enter your domain in the Custom Domain panel. You\'ll receive CNAME settings — update your DNS and click Verify DNS.',
+    a: 'Custom domains aren\'t supported yet. The Deployment Hub gives you a real Docker/Railway/Render config and a downloadable ZIP so you can deploy the generated app yourself, including to your own domain.',
   },
   {
     q: 'Is my data secure?',
@@ -102,17 +102,6 @@ const AccordionItem: React.FC<{ question: string; answer: string; isOpen: boolea
 
 const SupportPage: React.FC = () => {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
-  const [submitted, setSubmitted] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [form, setForm] = useState({ subject: '', category: '', message: '' });
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    await new Promise(r => setTimeout(r, 1500));
-    setIsSubmitting(false);
-    setSubmitted(true);
-  };
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
@@ -169,99 +158,26 @@ const SupportPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Contact Form */}
+        {/* Contact */}
         <div>
           <h2 className="text-xl font-semibold text-slate-800 font-poppins mb-1">Still need help?</h2>
-          <p className="text-slate-500 text-sm mb-6">Our team typically responds within 24 hours.</p>
+          <p className="text-slate-500 text-sm mb-6">
+            There's no support ticket system yet — email us directly and we'll get back to you.
+          </p>
 
-          <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-8">
-            <AnimatePresence mode="wait">
-              {submitted ? (
-                <motion.div
-                  key="success"
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="flex flex-col items-center text-center py-8"
-                >
-                  <div className="bg-green-100 rounded-full w-16 h-16 flex items-center justify-center mb-5">
-                    <CheckCircle2 size={32} className="text-green-600" />
-                  </div>
-                  <h3 className="text-lg font-bold text-slate-800 font-poppins mb-2">Message sent!</h3>
-                  <p className="text-slate-500 text-sm">
-                    We'll respond to <span className="font-semibold text-slate-700">user@company.com</span> within 24 hours.
-                  </p>
-                </motion.div>
-              ) : (
-                <motion.form
-                  key="form"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  onSubmit={handleSubmit}
-                  className="space-y-5"
-                >
-                  {/* Subject + Category */}
-                  <div className="flex flex-col md:flex-row gap-4">
-                    <div className="flex-1">
-                      <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">Subject</label>
-                      <input
-                        type="text"
-                        required
-                        value={form.subject}
-                        onChange={e => setForm(p => ({ ...p, subject: e.target.value }))}
-                        placeholder="Briefly describe your issue..."
-                        className="w-full h-11 border border-slate-200 rounded-xl px-4 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F766E]/20 focus:border-[#0F766E] transition-all"
-                      />
-                    </div>
-                    <div className="w-full md:w-48">
-                      <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">Category</label>
-                      <select
-                        required
-                        value={form.category}
-                        onChange={e => setForm(p => ({ ...p, category: e.target.value }))}
-                        className="w-full h-11 border border-slate-200 rounded-xl px-4 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F766E]/20 focus:border-[#0F766E] transition-all bg-white appearance-none"
-                      >
-                        <option value="">Select...</option>
-                        <option>Getting Started</option>
-                        <option>Technical Issue</option>
-                        <option>Billing</option>
-                        <option>Feature Request</option>
-                        <option>Other</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Message */}
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">Message</label>
-                    <textarea
-                      required
-                      value={form.message}
-                      onChange={e => setForm(p => ({ ...p, message: e.target.value }))}
-                      placeholder="Describe your issue in detail..."
-                      className="w-full min-h-[120px] border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F766E]/20 focus:border-[#0F766E] transition-all resize-y"
-                    />
-                  </div>
-
-                  {/* Attachment zone */}
-                  <div className="border-2 border-dashed border-slate-200 rounded-xl p-5 flex items-center justify-center gap-3 cursor-pointer hover:border-[#0F766E] hover:bg-teal-50/30 transition-all group">
-                    <Paperclip size={16} className="text-slate-400 group-hover:text-[#0F766E] transition-colors" />
-                    <span className="text-xs text-slate-400 group-hover:text-[#0F766E] transition-colors font-medium">
-                      Attach screenshot (optional) — PNG, JPG up to 5MB
-                    </span>
-                  </div>
-
-                  <div className="flex justify-end">
-                    <Button
-                      type="submit"
-                      isLoading={isSubmitting}
-                      className="h-11 px-8 bg-[#0F766E] hover:bg-[#0D6B63] text-white font-semibold shadow-sm"
-                    >
-                      Send Message →
-                    </Button>
-                  </div>
-                </motion.form>
-              )}
-            </AnimatePresence>
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-8 flex flex-col items-center text-center">
+            <div className="bg-purple-50 rounded-full w-16 h-16 flex items-center justify-center mb-5">
+              <Mail size={28} className="text-purple-600" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-800 font-poppins mb-2">Email our team</h3>
+            <p className="text-slate-500 text-sm mb-5 max-w-md">
+              Describe your issue and we'll reply as soon as we can.
+            </p>
+            <a href="mailto:support@flowforge.io?subject=FlowForge%20support%20request">
+              <Button className="h-11 px-8 bg-[#0F766E] hover:bg-[#0D6B63] text-white font-semibold shadow-sm">
+                support@flowforge.io →
+              </Button>
+            </a>
           </div>
       </div>
     </motion.div>

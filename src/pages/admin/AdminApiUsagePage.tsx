@@ -27,8 +27,9 @@ const AdminApiUsagePage: React.FC = () => {
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 flex items-start gap-3">
           <Info size={18} className="text-amber-600 mt-0.5 shrink-0" />
           <p className="text-sm text-amber-800">
-            <strong>AI request/cost metrics are not tracked in this build.</strong> Google Gemini is not configured (no API key),
-            so the generator runs deterministically without LLM calls. The metrics below are real platform activity.
+            <strong>Gemini request/token/cost metrics are not tracked in this build.</strong> Gemini is used for AI
+            Suggestions and blueprint extraction, but the code generator itself is a deterministic pipeline —
+            it makes no LLM calls. The metrics below are real platform activity.
           </p>
         </div>
 
