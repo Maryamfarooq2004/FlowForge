@@ -264,7 +264,7 @@ const WorkflowsOverviewPage: React.FC = () => {
 
           {/* Footer actions */}
           <div className="flex justify-end gap-3 mt-8">
-            <Button variant="outline" onClick={() => navigate(`/project/${projectId || 'new'}/blueprint`)}>
+            <Button variant="outline" onClick={() => navigate(`/project/${projectId || 'new'}/spec`)}>
               ← Back to Blueprint
             </Button>
             <Button
