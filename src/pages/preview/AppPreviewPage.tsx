@@ -1,87 +1,39 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Logo } from '../../components/shared/Logo';
 import { Button } from '../../components/ui/Button';
 import { cn } from '../../utils/classNames';
-import {
-  ExternalLink,
-  ChevronDown,
-  Lock,
-  RotateCw,
-  Sparkles,
-  Send,
-} from 'lucide-react';
+import { ChevronDown, Lock, RotateCw, Sparkles, Loader2, AlertTriangle } from 'lucide-react';
 import { useProject } from '../../hooks/useProjects';
+import { usePreviewState, useSetRole, useResetSandbox } from '../../hooks/usePreview';
+import type { ApiError } from '../../types/global.types';
 import { GeneratedAppLogin } from '../../features/preview/components/GeneratedAppLogin';
-import { GeneratedAppShell } from '../../features/preview/components/GeneratedAppShell';
-import type { AppScreen, AppRole } from '../../features/preview/components/GeneratedAppShell';
-import { GeneratedAppDoctorDashboard } from '../../features/preview/components/GeneratedAppDoctorDashboard';
-import { GeneratedAppManagerDashboard } from '../../features/preview/components/GeneratedAppManagerDashboard';
-import { GeneratedAppPatientsList } from '../../features/preview/components/GeneratedAppPatientsList';
-import { GeneratedAppPatientDetail } from '../../features/preview/components/GeneratedAppPatientDetail';
-import { GeneratedAppNewPatientForm } from '../../features/preview/components/GeneratedAppNewPatientForm';
-import { GeneratedAppPaymentsList } from '../../features/preview/components/GeneratedAppPaymentsList';
-import { GeneratedAppNotifications } from '../../features/preview/components/GeneratedAppNotifications';
+import { PreviewRuntime } from '../../features/preview/renderer/PreviewRuntime';
 
 const AppPreviewPage: React.FC = () => {
   const navigate = useNavigate();
   const { projectId } = useParams();
   const { data: project } = useProject(projectId);
 
-  const [activeRole, setActiveRole] = useState<AppRole>('Receptionist');
+  const stateQuery = usePreviewState(projectId);
+  const setRole = useSetRole(projectId);
+  const reset = useResetSandbox(projectId);
+
+  const state = stateQuery.data;
+  const meta = state?.meta;
+
   const [roleMenuOpen, setRoleMenuOpen] = useState(false);
-  const [chatInput, setChatInput] = useState('');
-  const [chatMessages, setChatMessages] = useState([
-    { id: 1, sender: 'user', text: 'Rename the Patient Name column to Full Name' },
-    { id: 2, sender: 'ai', text: 'Done ✅ — Column renamed to **Full Name** on the Appointments list screen. Preview updated.', timestamp: 'regenerated in 34s' },
-  ]);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [previewMode, setPreviewMode] = useState<'login' | 'app'>('login');
-  const [appScreen, setAppScreen] = useState<AppScreen>('dashboard-receptionist');
-  const chatEndRef = useRef<HTMLDivElement>(null);
+  const [previewMode, setPreviewMode] = useState<'login' | 'app'>('app');
 
-  const handleRoleChange = (role: AppRole) => {
-    setActiveRole(role);
-    setRoleMenuOpen(false);
-    const screenMap: Record<AppRole, AppScreen> = {
-      Receptionist: 'dashboard-receptionist',
-      Doctor: 'dashboard-doctor',
-      Manager: 'dashboard-manager',
-    };
-    setAppScreen(screenMap[role]);
-  };
+  const appName = meta?.appLabel || project?.name || 'My App';
+  const activeRoleName = meta?.roles.find((r) => r.key === state?.activeRoleKey)?.name ?? '—';
+  const urlPath =
+    previewMode === 'login'
+      ? 'app.preview.flowforge.app/login'
+      : `app.preview.flowforge.app/${appName.toLowerCase().replace(/\s+/g, '-')}`;
 
-  const handleDeploy = () => {
-    navigate(`/project/${projectId || 'new'}/deploy`);
-  };
-
-  const handleChatSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!chatInput.trim() || isGenerating) return;
-
-    const newMsg = { id: Date.now(), sender: 'user', text: chatInput };
-    setChatMessages(prev => [...prev, newMsg]);
-    setChatInput('');
-    setIsGenerating(true);
-
-    setTimeout(() => {
-      setChatMessages(prev => [...prev, {
-        id: Date.now() + 1,
-        sender: 'ai',
-        text: 'Done ✅ — The UI has been updated as requested. This only affects display, not underlying data.',
-        timestamp: 'regenerated in 12s'
-      }]);
-      setIsGenerating(false);
-    }, 2000);
-  };
-
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [chatMessages, isGenerating]);
-
-  const urlPath = previewMode === 'login'
-    ? 'my-org.preview.flowforge.app/login'
-    : `my-org.preview.flowforge.app/${appScreen.replace('dashboard-', '').replace('-', '/')}`;
+  const errStatus = (stateQuery.error as ApiError | null)?.response?.status;
+  const errMessage = (stateQuery.error as ApiError | null)?.response?.data?.message;
 
   return (
     <div className="h-screen bg-slate-50 flex flex-col overflow-hidden font-inter">
@@ -97,30 +49,34 @@ const AppPreviewPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Role Switcher */}
+        {/* Role Switcher (populated from the spec's roles) */}
         <div className="flex justify-center w-1/3 relative">
           <button
-            onClick={() => setRoleMenuOpen(p => !p)}
-            className="bg-teal-700/50 hover:bg-teal-700 rounded-lg px-4 py-1.5 flex items-center space-x-3 transition-colors border border-teal-600/50"
+            onClick={() => setRoleMenuOpen((p) => !p)}
+            disabled={!meta}
+            className="bg-teal-700/50 hover:bg-teal-700 rounded-lg px-4 py-1.5 flex items-center space-x-3 transition-colors border border-teal-600/50 disabled:opacity-50"
           >
             <div className="flex flex-col items-start">
               <span className="text-[9px] font-bold text-teal-300 uppercase tracking-widest leading-none">VIEWING AS:</span>
-              <span className="text-sm font-medium text-white leading-tight">{activeRole}</span>
+              <span className="text-sm font-medium text-white leading-tight">{activeRoleName}</span>
             </div>
             <ChevronDown size={14} className="text-teal-300" />
           </button>
-          {roleMenuOpen && (
-            <div className="absolute top-10 bg-white rounded-xl shadow-xl border border-slate-100 z-50 overflow-hidden w-44">
-              {(['Receptionist', 'Doctor', 'Manager'] as AppRole[]).map(role => (
+          {roleMenuOpen && meta && (
+            <div className="absolute top-10 bg-white rounded-xl shadow-xl border border-slate-100 z-50 overflow-hidden w-52">
+              {meta.roles.map((role) => (
                 <button
-                  key={role}
-                  onClick={() => handleRoleChange(role)}
+                  key={role.key}
+                  onClick={() => {
+                    setRole.mutate(role.key);
+                    setRoleMenuOpen(false);
+                  }}
                   className={cn(
                     'w-full text-left px-4 py-2.5 text-sm font-medium transition-colors',
-                    activeRole === role ? 'bg-teal-50 text-[#0F766E] font-bold' : 'text-slate-700 hover:bg-slate-50'
+                    state?.activeRoleKey === role.key ? 'bg-teal-50 text-[#0F766E] font-bold' : 'text-slate-700 hover:bg-slate-50'
                   )}
                 >
-                  {role}
+                  {role.name}
                 </button>
               ))}
             </div>
@@ -128,28 +84,39 @@ const AppPreviewPage: React.FC = () => {
         </div>
 
         <div className="flex items-center justify-end space-x-4 w-1/3">
-          <button 
-            onClick={() => window.open(`https://${urlPath}`, '_blank')}
-            className="text-xs font-bold text-white border border-white/20 hover:bg-white/10 rounded-lg px-4 py-2 flex items-center space-x-2 transition-colors"
+          <button
+            onClick={() => reset.mutate()}
+            disabled={!meta || reset.isPending}
+            className="text-xs font-bold text-white border border-white/20 hover:bg-white/10 rounded-lg px-4 py-2 flex items-center space-x-2 transition-colors disabled:opacity-50"
           >
-            <ExternalLink size={14} />
-            <span>Open in New Tab</span>
+            <RotateCw size={14} className={reset.isPending ? 'animate-spin' : ''} />
+            <span>Reset Demo</span>
+          </button>
+          <button
+            onClick={() => navigate(`/project/${projectId}/theme`)}
+            className="text-xs font-bold text-white border border-white/20 hover:bg-white/10 rounded-lg px-4 py-2 transition-colors"
+          >
+            Theme
+          </button>
+          <button
+            onClick={() => navigate(`/project/${projectId}/artifacts`)}
+            className="text-xs font-bold text-white border border-white/20 hover:bg-white/10 rounded-lg px-4 py-2 transition-colors"
+          >
+            View Code
           </button>
           <Button
-            onClick={handleDeploy}
+            onClick={() => navigate(`/project/${projectId}/deploy`)}
             className="bg-[#0F766E] hover:bg-[#0D6B63] text-white text-xs font-bold px-5 py-2 h-auto rounded-lg"
           >
-            Deploy Live
+            Deploy
           </Button>
         </div>
       </nav>
 
       {/* Split Pane Content */}
       <div className="flex-1 flex overflow-hidden">
-
         {/* Left Pane - Browser Chrome & App */}
         <div className="flex-1 flex flex-col bg-[#F1F5F9] p-4 lg:p-6 pb-0 overflow-hidden relative">
-
           {/* Browser Chrome Strip */}
           <div className="bg-[#E2E8F0] rounded-t-xl flex items-center px-4 py-2.5 space-x-4 border border-b-0 border-slate-300 shadow-sm shrink-0">
             <div className="flex space-x-1.5 shrink-0">
@@ -164,158 +131,80 @@ const AppPreviewPage: React.FC = () => {
               </div>
             </div>
             <div className="flex items-center space-x-3 shrink-0">
-              <div className="bg-slate-200 p-1 rounded-lg flex space-x-1 mr-2">
-                <button
-                  onClick={() => setPreviewMode('login')}
-                  className={cn('px-2 py-1 rounded text-[10px] font-bold transition-colors', previewMode === 'login' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700')}
-                >
-                  LOGIN
-                </button>
-                <button
-                  onClick={() => setPreviewMode('app')}
-                  className={cn('px-2 py-1 rounded text-[10px] font-bold transition-colors', previewMode === 'app' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700')}
-                >
-                  APP
-                </button>
+              <div className="bg-slate-200 p-1 rounded-lg flex space-x-1">
+                {(['login', 'app'] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    onClick={() => setPreviewMode(mode)}
+                    className={cn(
+                      'px-2 py-1 rounded text-[10px] font-bold uppercase transition-colors',
+                      previewMode === mode ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'
+                    )}
+                  >
+                    {mode}
+                  </button>
+                ))}
               </div>
-              <RotateCw 
-                size={14} 
-                className="text-slate-500 hover:text-slate-700 cursor-pointer transition-transform active:rotate-180" 
-                onClick={() => {
-                  setPreviewMode('login');
-                  setTimeout(() => setPreviewMode('app'), 100);
-                }}
-              />
-              <span className="text-[10px] text-slate-400 font-medium hidden sm:block">Sample output — {project?.name || 'My Project'}</span>
             </div>
           </div>
 
           {/* Generated App Viewport */}
           <div className="flex-1 bg-white border border-slate-300 border-t-0 shadow-xl overflow-hidden flex flex-col relative rounded-b-xl">
-            {previewMode === 'login' ? (
-              <GeneratedAppLogin
-                appName={project?.name || 'My App'}
-                appTheme="teal"
-                roles={['Receptionist', 'Doctor', 'Manager']}
-              />
-            ) : (
-              <GeneratedAppShell
-                activeScreen={appScreen}
-                activeRole={activeRole}
-                onNavigate={(screen) => setAppScreen(screen)}
-              >
-                {/* Receptionist Dashboard */}
-                {appScreen === 'dashboard-receptionist' && (
-                  <div className="p-5">
-                    <h1 className="text-xl font-bold text-slate-900 font-poppins">Good morning, Receptionist</h1>
-                    <p className="text-sm text-slate-500 mt-1">Welcome to the {project?.name || 'App'} Dashboard.</p>
-                    <div className="mt-6 grid grid-cols-3 gap-4">
-                      {[
-                        { label: "Today's Appointments", value: '12' },
-                        { label: 'Pending Payments (PKR)', value: '8,400' },
-                        { label: 'Follow-ups Due', value: '3' },
-                      ].map(card => (
-                        <div key={card.label} className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
-                          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">{card.label}</p>
-                          <p className="text-2xl font-bold text-slate-900 font-poppins">{card.value}</p>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="mt-4 bg-indigo-600 rounded-xl px-4 py-3 text-white text-xs font-semibold flex items-center gap-2">
-                      🔐 Receptionist view — Scheduling, Payments, and Patient Registration enabled.
-                    </div>
-                  </div>
-                )}
-                {appScreen === 'dashboard-doctor' && <GeneratedAppDoctorDashboard />}
-                {appScreen === 'dashboard-manager' && <GeneratedAppManagerDashboard />}
-                {appScreen === 'patients' && (
-                  <GeneratedAppPatientsList
-                    onViewPatient={() => setAppScreen('patient-detail')}
-                    onNewPatient={() => setAppScreen('new-patient')}
-                  />
-                )}
-                {appScreen === 'patient-detail' && (
-                  <GeneratedAppPatientDetail onBack={() => setAppScreen('patients')} />
-                )}
-                {appScreen === 'new-patient' && (
-                  <GeneratedAppNewPatientForm onBack={() => setAppScreen('patients')} />
-                )}
-                {appScreen === 'payments' && <GeneratedAppPaymentsList />}
-                {appScreen === 'notifications' && <GeneratedAppNotifications />}
-              </GeneratedAppShell>
+            {stateQuery.isLoading && (
+              <div className="flex-1 flex flex-col items-center justify-center gap-3 text-slate-400">
+                <Loader2 className="animate-spin text-[#0F766E]" size={28} />
+                <p className="text-sm">Preparing your preview…</p>
+              </div>
             )}
+
+            {stateQuery.isError && (
+              <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center px-6">
+                <AlertTriangle size={30} className="text-amber-500" />
+                <h2 className="text-lg font-bold text-slate-800">
+                  {errStatus === 400 ? 'Approve your blueprint first' : errStatus === 404 ? 'Nothing to preview yet' : "Couldn't load the preview"}
+                </h2>
+                <p className="text-sm text-slate-500 max-w-md">{errMessage || 'Complete the blueprint and code generation, then come back.'}</p>
+                <Button onClick={() => navigate(`/project/${projectId}/spec`)} className="bg-[#0F766E] text-white mt-2">
+                  Go to blueprint
+                </Button>
+              </div>
+            )}
+
+            {state && meta && previewMode === 'login' && (
+              <GeneratedAppLogin appName={appName} appTheme="teal" roles={meta.roles.map((r) => r.name)} />
+            )}
+            {state && meta && previewMode === 'app' && <PreviewRuntime projectId={projectId!} state={state} />}
           </div>
         </div>
 
-        {/* Right Pane - UI Assistant */}
-        <aside className="w-[360px] bg-white border-l border-slate-200 shrink-0 flex flex-col">
+        {/* Right Pane - UI Assistant (disabled placeholder — arrives in a later phase) */}
+        <aside className="w-[340px] bg-white border-l border-slate-200 shrink-0 flex flex-col">
           <div className="p-5 border-b border-slate-100 shadow-sm relative z-10 bg-white">
             <div className="flex items-center space-x-2 mb-1">
               <h2 className="font-bold text-slate-800 text-lg">UI Assistant</h2>
               <Sparkles size={18} className="text-teal-500" />
             </div>
-            <p className="text-xs text-slate-500">Describe any UI change in plain language</p>
+            <p className="text-xs text-slate-500">Describe UI changes in plain language</p>
           </div>
-
-          {/* Chat Messages */}
-          <div className="flex-1 overflow-y-auto p-5 space-y-6 bg-slate-50/50">
-            {chatMessages.map(msg => (
-              <div key={msg.id} className={cn('flex flex-col', msg.sender === 'user' ? 'items-end' : 'items-start')}>
-                <div className={cn(
-                  'px-4 py-3 text-sm max-w-[90%] shadow-sm',
-                  msg.sender === 'user'
-                    ? 'bg-[#4F46E5] text-white rounded-2xl rounded-tr-sm'
-                    : 'bg-white text-slate-700 border border-slate-200 border-l-2 border-l-teal-400 rounded-2xl rounded-tl-sm'
-                )}>
-                  {msg.text.split('**').map((part, i) => i % 2 === 1 ? <strong key={i}>{part}</strong> : part)}
-                </div>
-                {(msg as any).timestamp && (
-                  <span className="text-[10px] text-slate-400 font-medium mt-1 ml-1">{(msg as any).timestamp}</span>
-                )}
-              </div>
-            ))}
-
-            {isGenerating && (
-              <div className="flex flex-col items-start">
-                <div className="px-4 py-3 text-sm max-w-[90%] shadow-sm bg-white text-slate-700 border border-slate-200 border-l-2 border-l-amber-400 rounded-2xl rounded-tl-sm flex flex-col space-y-3">
-                  <p>Updating UI theme... regenerating affected screens (estimated 15s).</p>
-                  <div className="flex space-x-1.5 px-1">
-                    <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                    <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                    <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-                  </div>
-                </div>
-              </div>
-            )}
-            <div ref={chatEndRef} />
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-slate-50/50">
+            <Sparkles size={28} className="text-slate-300 mb-3" />
+            <p className="text-sm font-semibold text-slate-500">AI UI Assistant</p>
+            <p className="text-xs text-slate-400 mt-1">Conversational UI editing arrives in a later phase.</p>
           </div>
-
-          {/* Chat Input */}
           <div className="p-4 bg-white border-t border-slate-200">
-            <form onSubmit={handleChatSubmit} className="relative">
+            <div className="relative opacity-60">
               <input
                 type="text"
-                value={chatInput}
-                onChange={e => setChatInput(e.target.value)}
-                placeholder="Describe a UI change..."
-                className="w-full bg-slate-100 border border-slate-200 rounded-full py-3 pl-4 pr-12 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F766E]/20 focus:border-[#0F766E] transition-all"
-                disabled={isGenerating}
+                disabled
+                placeholder="Describe a UI change… (coming soon)"
+                className="w-full bg-slate-100 border border-slate-200 rounded-full py-3 pl-4 pr-12 text-sm cursor-not-allowed"
               />
-              <button
-                type="submit"
-                disabled={!chatInput.trim() || isGenerating}
-                className="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 bg-[#0F766E] text-white rounded-full flex items-center justify-center hover:bg-[#0D6B63] transition-colors disabled:opacity-50 disabled:bg-slate-400"
-              >
-                <Send size={14} className="ml-0.5" />
-              </button>
-            </form>
+            </div>
             <p className="text-[10px] text-slate-400 text-center mt-3 leading-relaxed px-2">
-              Changes affect layout and style only — to change logic or data, edit the <strong className="text-slate-500">WorkflowSpec</strong>.
+              To change data or logic, edit the <strong className="text-slate-500">WorkflowSpec</strong> and regenerate.
             </p>
           </div>
-
         </aside>
-
       </div>
     </div>
   );

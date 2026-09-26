@@ -1,187 +1,137 @@
 import React, { useState } from 'react';
 import { AdminLayout } from '../../components/admin/AdminLayout';
-import { 
-  Search, 
-  Download, 
-  MoreVertical, 
-  Eye, 
-  UserX, 
-  Mail, 
-  Trash2,
-  ChevronRight,
-  Filter
-} from 'lucide-react';
+import { Search, ShieldCheck, ShieldOff } from 'lucide-react';
 import { cn } from '../../utils/classNames';
 import { Avatar } from '../../components/ui/Avatar';
-import { motion, AnimatePresence } from 'framer-motion';
-
-const MOCK_USERS = [
-  { id: 'u1', name: 'Maryam Farooq', email: 'maryam@flowforge.app', orgType: 'Clinic', joined: '15 Jan 2026', projects: 3, status: 'ACTIVE' },
-  { id: 'u2', name: 'Alex Rivera', email: 'alex@company.com', orgType: 'School', joined: '20 Jan 2026', projects: 1, status: 'ACTIVE' },
-  { id: 'u3', name: 'James Wilson', email: 'james@company.com', orgType: 'Clinic', joined: '02 Feb 2026', projects: 0, status: 'ACTIVE' },
-  { id: 'u4', name: 'Zoya Khan', email: 'zoya@company.com', orgType: 'School', joined: '05 Feb 2026', projects: 2, status: 'ACTIVE' },
-  { id: 'u5', name: 'Omar Riaz', email: 'omar@company.com', orgType: 'Clinic', joined: '10 Feb 2026', projects: 0, status: 'SUSPENDED' },
-];
+import { useAdminUsers, useSetUserRole } from '../../hooks/useAdmin';
+import { useAuthStore } from '../../store/authStore';
 
 const AdminUsersPage: React.FC = () => {
+  const { user: me } = useAuthStore();
   const [search, setSearch] = useState('');
-  const [activeMenu, setActiveMenu] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
 
-  const filteredUsers = MOCK_USERS.filter(u => 
-    u.name.toLowerCase().includes(search.toLowerCase()) || 
-    u.email.toLowerCase().includes(search.toLowerCase())
-  );
+  const { data, isLoading } = useAdminUsers({ search, page });
+  const setRole = useSetUserRole();
+
+  const users = data?.users ?? [];
+  const total = data?.total ?? 0;
+  const limit = data?.limit ?? 20;
+  const totalPages = Math.max(1, Math.ceil(total / limit));
+
+  const onSearch = (v: string) => {
+    setSearch(v);
+    setPage(1);
+  };
 
   return (
     <AdminLayout currentSection="User Management">
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-end justify-between">
+        <div className="flex items-end justify-between flex-wrap gap-4">
           <div>
             <h1 className="text-[28px] font-bold text-slate-900 font-poppins">User Management</h1>
-            <p className="text-slate-500 mt-1">Manage platform users, organizations, and permissions.</p>
+            <p className="text-slate-500 mt-1">{total} user{total === 1 ? '' : 's'} · promote or revoke admin access.</p>
           </div>
-          <div className="flex items-center space-x-3">
-            <button className="flex items-center gap-2 h-10 px-4 border border-slate-200 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors">
-              <Download size={16} />Export CSV
-            </button>
-            <div className="relative">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input 
-                type="text" 
-                placeholder="Search users..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                className="pl-10 pr-4 h-10 w-72 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0F766E]/20 focus:border-[#0F766E] transition-all"
-              />
-            </div>
+          <div className="relative">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search name or email…"
+              value={search}
+              onChange={(e) => onSearch(e.target.value)}
+              aria-label="Search users"
+              className="pl-10 pr-4 h-10 w-72 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0F766E]/20 focus:border-[#0F766E] transition-all"
+            />
           </div>
         </div>
 
-        {/* Users Table */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="bg-slate-50 border-b border-slate-200">
-                  <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">USER</th>
-                  <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">ORG TYPE</th>
-                  <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">JOINED</th>
-                  <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">PROJECTS</th>
-                  <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">STATUS</th>
-                  <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">ACTIONS</th>
+                <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                  <th className="px-6 py-4">User</th>
+                  <th className="px-6 py-4">Org</th>
+                  <th className="px-6 py-4">Role</th>
+                  <th className="px-6 py-4">Projects</th>
+                  <th className="px-6 py-4">Joined</th>
+                  <th className="px-6 py-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredUsers.map((user) => (
-                  <tr key={user.id} className="group hover:bg-slate-50/80 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center space-x-3">
-                        <Avatar name={user.name} size="md" className="bg-slate-100 text-[#0F766E] font-bold" />
-                        <div>
-                          <p className="font-bold text-slate-900">{user.name}</p>
-                          <p className="text-xs text-slate-500">{user.email}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={cn(
-                        "px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider",
-                        user.orgType === 'Clinic' ? "bg-teal-50 text-teal-700" : "bg-blue-50 text-blue-700"
-                      )}>
-                        {user.orgType.toUpperCase()}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-slate-600">{user.joined}</td>
-                    <td className="px-6 py-4">
-                      <span className="font-semibold text-slate-700">{user.projects} projects</span>
-                    </td>
-    <td className="px-6 py-4">
-      <span className={cn(
-        "px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider inline-flex items-center gap-1.5",
-        user.status === 'ACTIVE' ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-      )}>
-        <div className={cn("w-1.5 h-1.5 rounded-full", 
-          user.status === 'ACTIVE' ? "bg-green-500" : "bg-red-500"
-        )} />
-        {user.status}
-      </span>
-    </td>
-    <td className="px-6 py-4 text-right">
-      <div className="flex items-center justify-end space-x-2">
-        <button className="p-2 text-slate-400 hover:text-[#0F766E] hover:bg-teal-50 rounded-lg transition-colors">
-          <Eye size={16} />
-        </button>
-                        <div className="relative">
-                          <button 
-                            onClick={() => setActiveMenu(activeMenu === user.id ? null : user.id)}
-                            className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+                {isLoading ? (
+                  <tr><td colSpan={6} className="px-6 py-12 text-center text-slate-400">Loading…</td></tr>
+                ) : users.length === 0 ? (
+                  <tr><td colSpan={6} className="px-6 py-12 text-center text-slate-400">No users found.</td></tr>
+                ) : (
+                  users.map((u) => {
+                    const isSelf = me?.id === u.id;
+                    const isAdmin = u.role === 'admin';
+                    return (
+                      <tr key={u.id} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center space-x-3">
+                            <Avatar name={u.fullName} size="md" className="bg-slate-100 text-[#0F766E] font-bold" />
+                            <div>
+                              <p className="font-bold text-slate-900">{u.fullName}</p>
+                              <p className="text-xs text-slate-500">{u.email}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={cn('px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider capitalize',
+                            u.organizationType === 'clinic' ? 'bg-teal-50 text-teal-700' : 'bg-blue-50 text-blue-700')}>
+                            {u.organizationType}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={cn('px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider inline-flex items-center gap-1.5',
+                            isAdmin ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600')}>
+                            <div className={cn('w-1.5 h-1.5 rounded-full', isAdmin ? 'bg-indigo-500' : 'bg-slate-400')} />
+                            {isAdmin ? 'ADMIN' : 'USER'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 font-semibold text-slate-700">{u.projectCount}</td>
+                        <td className="px-6 py-4 text-slate-600">{new Date(u.createdAt).toLocaleDateString()}</td>
+                        <td className="px-6 py-4 text-right">
+                          <button
+                            disabled={isSelf || setRole.isPending}
+                            title={isSelf ? "You can't change your own role" : undefined}
+                            onClick={() => setRole.mutate({ id: u.id, role: isAdmin ? 'user' : 'admin' })}
+                            className={cn('inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors disabled:opacity-40',
+                              isAdmin ? 'text-amber-700 hover:bg-amber-50' : 'text-[#0F766E] hover:bg-teal-50')}
                           >
-                            <MoreVertical size={16} />
+                            {isAdmin ? <><ShieldOff size={14} /> Revoke admin</> : <><ShieldCheck size={14} /> Make admin</>}
                           </button>
-                          
-                          <AnimatePresence>
-                            {activeMenu === user.id && (
-                              <>
-                                <div className="fixed inset-0 z-10" onClick={() => setActiveMenu(null)} />
-                                <motion.div 
-                                  initial={{ opacity: 0, scale: 0.95, y: -10 }}
-                                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                                  exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                                  className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-100 z-20 py-1 overflow-hidden"
-                                >
-                                  <button className="w-full text-left px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-3">
-                                    <Eye size={16} className="text-slate-400" /> View Details
-                                  </button>
-                                  <button className="w-full text-left px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-3">
-                                    <Mail size={16} className="text-slate-400" /> Contact User
-                                  </button>
-                                  <div className="h-[1px] bg-slate-100 my-1" />
-                                  <button className="w-full text-left px-4 py-2.5 text-sm text-amber-600 hover:bg-amber-50 flex items-center gap-3">
-                                    <UserX size={16} /> Suspend User
-                                  </button>
-                                  <button className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 flex items-center gap-3">
-                                    <Trash2 size={16} /> Delete Account
-                                  </button>
-                                </motion.div>
-                              </>
-                            )}
-                          </AnimatePresence>
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>
-          
-          {/* Pagination Placeholder */}
+
           <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
-            <span className="text-xs text-slate-500 font-medium">Showing 1 to {filteredUsers.length} of 142 users</span>
+            <span className="text-xs text-slate-500 font-medium">Page {page} of {totalPages}</span>
             <div className="flex items-center space-x-2">
-              <button disabled className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-slate-400 bg-white cursor-not-allowed">Previous</button>
-              <button className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-[#0F766E] bg-white hover:bg-teal-50 transition-colors">Next</button>
+              <button
+                disabled={page <= 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-slate-600 bg-white disabled:text-slate-300 disabled:cursor-not-allowed hover:bg-slate-50"
+              >
+                Previous
+              </button>
+              <button
+                disabled={page >= totalPages}
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-[#0F766E] bg-white disabled:text-slate-300 disabled:cursor-not-allowed hover:bg-teal-50"
+              >
+                Next
+              </button>
             </div>
           </div>
         </div>
-
-        {/* Empty State Simulation */}
-        {filteredUsers.length === 0 && (
-          <div className="py-20 flex flex-col items-center justify-center bg-white rounded-2xl border border-slate-200 border-dashed">
-            <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-6">
-              <Search size={32} className="text-slate-300" />
-            </div>
-            <h3 className="text-lg font-semibold text-slate-900 font-poppins">No users found</h3>
-            <p className="text-slate-500 text-sm mt-1 max-w-xs text-center">We couldn't find any users matching your search criteria. Try a different name or email.</p>
-            <button 
-              onClick={() => setSearch('')}
-              className="mt-6 text-[#0F766E] font-bold text-sm hover:underline"
-            >
-              Clear search
-            </button>
-          </div>
-        )}
       </div>
     </AdminLayout>
   );

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Clock, MoreVertical, ExternalLink, Copy, Archive, Trash2 } from 'lucide-react';
+import { Clock, MoreVertical, ExternalLink, Copy, Archive, ArchiveRestore, Trash2 } from 'lucide-react';
 import type { Project, ProjectStatus, ProjectDomain } from '../../../types/project.types';
 
 const statusConfig: Record<ProjectStatus, { label: string; className: string }> = {
@@ -32,17 +32,21 @@ const formatDate = (dateString: string): string => {
 interface ProjectCardProps {
   project: Project;
   isResuming?: boolean;
+  isArchived?: boolean;
   onOpen: () => void;
   onDuplicate: () => void;
   onArchive: () => void;
+  onRestore?: () => void;
   onDelete: () => void;
 }
 
 export const ProjectCard = ({
   project,
+  isArchived = false,
   onOpen,
   onDuplicate,
   onArchive,
+  onRestore,
   onDelete,
 }: ProjectCardProps) => {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -141,14 +145,25 @@ export const ProjectCard = ({
                   <Copy className="w-4 h-4 text-slate-400" />
                   Duplicate
                 </button>
-                <button
-                  onClick={() => { onArchive(); setMenuOpen(false); }}
-                  className="w-full text-left px-4 py-2.5 text-sm text-slate-700 
-                             hover:bg-slate-50 flex items-center gap-2.5"
-                >
-                  <Archive className="w-4 h-4 text-slate-400" />
-                  Archive
-                </button>
+                {isArchived ? (
+                  <button
+                    onClick={() => { onRestore?.(); setMenuOpen(false); }}
+                    className="w-full text-left px-4 py-2.5 text-sm text-slate-700
+                               hover:bg-slate-50 flex items-center gap-2.5"
+                  >
+                    <ArchiveRestore className="w-4 h-4 text-slate-400" />
+                    Restore to Hub
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => { onArchive(); setMenuOpen(false); }}
+                    className="w-full text-left px-4 py-2.5 text-sm text-slate-700
+                               hover:bg-slate-50 flex items-center gap-2.5"
+                  >
+                    <Archive className="w-4 h-4 text-slate-400" />
+                    Archive
+                  </button>
+                )}
                 <div className="border-t border-slate-100 my-1" />
                 <button
                   onClick={() => { setShowDeleteConfirm(true); setMenuOpen(false); }}

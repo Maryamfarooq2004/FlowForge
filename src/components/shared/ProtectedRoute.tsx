@@ -34,3 +34,17 @@ export const PublicOnlyRoute = ({ children }: Props) => {
 
   return <>{children}</>;
 };
+
+// Admin-only guard: must be authenticated AND role === 'admin'.
+export const AdminRoute = ({ children }: Props) => {
+  const { isAuthenticated, user } = useAuthStore();
+  const location = useLocation();
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
+  }
+  if (user?.role !== 'admin') {
+    return <Navigate to="/hub" replace />;
+  }
+  return <>{children}</>;
+};

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Plus, FolderOpen, Sparkles } from 'lucide-react';
+import { Plus, FolderOpen, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   useProjects,
   useIsFirstTimeUser,
@@ -8,6 +8,7 @@ import {
   useArchiveProject,
   useDeleteProject,
   useDuplicateProject,
+  useRestoreProject,
   useArchivedProjects,
 } from '../../hooks/useProjects';
 import { useAuthStore } from '../../store/authStore';
@@ -20,6 +21,7 @@ export default function ProjectHubPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [initialDomain, setInitialDomain] = useState<'clinic' | 'school' | null>(null);
   const [activeTab, setActiveTab] = useState<'all' | 'archived'>('all');
+  const [page, setPage] = useState(1);
 
   // Handle state from onboarding
   useEffect(() => {
@@ -36,14 +38,15 @@ export default function ProjectHubPage() {
   // REAL user data from MongoDB via auth store
   const { user } = useAuthStore();
 
-  // REAL projects from MongoDB — filtered to this user only
-  const { data: activeData, isLoading: loadingActive, isError: errorActive, refetch: refetchActive } = useProjects();
+  // REAL projects from MongoDB — filtered to this user only (paginated)
+  const { data: activeData, isLoading: loadingActive, isError: errorActive, refetch: refetchActive } = useProjects({ page });
   const { data: archivedData, isLoading: loadingArchived, isError: errorArchived, refetch: refetchArchived } = useArchivedProjects();
 
   const projects = activeTab === 'all' ? (activeData?.projects ?? []) : (archivedData?.projects ?? []);
   const isLoading = activeTab === 'all' ? loadingActive : loadingArchived;
   const isError = activeTab === 'all' ? errorActive : errorArchived;
   const refetch = activeTab === 'all' ? refetchActive : refetchArchived;
+  const pagination = activeData?.pagination;
 
   // Check if first time user (no projects in DB)
   const { data: isFirstTime, isLoading: checkingFirstTime } = useIsFirstTimeUser();
@@ -53,6 +56,7 @@ export default function ProjectHubPage() {
   const { mutate: archiveProject } = useArchiveProject();
   const { mutate: deleteProject }  = useDeleteProject();
   const { mutate: duplicateProject } = useDuplicateProject();
+  const { mutate: restoreProject } = useRestoreProject();
 
   // ── LOADING ───────────────────────────────────────────────────
   if (isLoading || checkingFirstTime) {
@@ -145,9 +149,12 @@ export default function ProjectHubPage() {
             Welcome back, {user?.fullName?.split(' ')[0] ?? 'there'}
           </h1>
           <p className="text-sm text-slate-500 mt-1">
-            {projects.length === 1
-              ? 'You have 1 active project.'
-              : `You have ${projects.length} active projects.`}
+            {activeTab === 'archived'
+              ? `${projects.length} archived ${projects.length === 1 ? 'project' : 'projects'}.`
+              : (() => {
+                  const total = pagination?.total ?? projects.length;
+                  return `You have ${total} active ${total === 1 ? 'project' : 'projects'}.`;
+                })()}
           </p>
         </div>
         <button
@@ -166,7 +173,7 @@ export default function ProjectHubPage() {
         {(['all', 'archived'] as const).map((tab) => (
           <button
             key={tab}
-            onClick={() => setActiveTab(tab)}
+            onClick={() => { setActiveTab(tab); setPage(1); }}
             className={`px-4 py-2.5 text-sm font-medium capitalize transition-colors
               ${activeTab === tab
                 ? 'text-[#0F766E] border-b-2 border-[#0F766E]'
@@ -207,15 +214,46 @@ export default function ProjectHubPage() {
               key={project.id}
               project={project}
               isResuming={isResuming}
+              isArchived={activeTab === 'archived'}
               // Clicking open → fetches resume point from DB → navigates
               onOpen={() => resumeProject(project.id)}
               onDuplicate={() => duplicateProject(project.id)}
               onArchive={() => archiveProject(project.id)}
+              onRestore={() => restoreProject(project.id)}
               onDelete={() => deleteProject(project.id)}
             />
           ))
         )}
       </div>
+
+      {/* Pagination (active projects only) */}
+      {activeTab === 'all' && pagination && pagination.totalPages > 1 && (
+        <div className="flex items-center justify-center gap-3 mt-8">
+          <button
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={!pagination.hasPrevPage}
+            aria-label="Previous page"
+            className="flex items-center gap-1 px-3 py-2 rounded-lg border border-slate-200
+                       text-sm font-medium text-slate-600 hover:bg-slate-50
+                       disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            <ChevronLeft className="w-4 h-4" /> Prev
+          </button>
+          <span className="text-sm text-slate-500">
+            Page {pagination.page} of {pagination.totalPages}
+          </span>
+          <button
+            onClick={() => setPage((p) => p + 1)}
+            disabled={!pagination.hasNextPage}
+            aria-label="Next page"
+            className="flex items-center gap-1 px-3 py-2 rounded-lg border border-slate-200
+                       text-sm font-medium text-slate-600 hover:bg-slate-50
+                       disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            Next <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       <CreateProjectModal
         isOpen={showCreateModal}

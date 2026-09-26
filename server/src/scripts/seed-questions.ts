@@ -51,7 +51,11 @@ const CLINIC_QUESTIONS = [
   { id: 'followup_needed', section: 'Communication', question: 'Do patients require follow-ups?', type: 'select', required: true, options: ['Most patients', 'Specific cases', 'Chronic only', 'Rarely'] },
   { id: 'notification_channels', section: 'Communication', question: 'System notification channels?', type: 'multi_checkbox', required: true, options: ['Email', 'SMS', 'WhatsApp', 'In-app'] },
   { id: 'reminder_priority', section: 'Communication', question: 'How critical are automated reminders?', type: 'slider', required: false },
-  { id: 'go_live_date', section: 'Communication', question: 'Proposed Go-Live date for the system?', type: 'date', required: true }
+  { id: 'go_live_date', section: 'Communication', question: 'Proposed Go-Live date for the system?', type: 'date', required: true },
+
+  // Section 7: Approvals & Integrations (2) — FE2.3 critical coverage
+  { id: 'clinic_approvals', section: 'Approvals & Integrations', question: 'Which actions require manager/senior approval before they are finalized?', type: 'multi_checkbox', required: true, options: ['Fee waivers / discounts', 'Refunds', 'Deleting patient records', 'Prescription overrides', 'Large expenses', 'None needed'] },
+  { id: 'clinic_integrations', section: 'Approvals & Integrations', question: 'Which external systems must the app connect to?', type: 'multi_checkbox', required: true, options: ['External lab systems', 'Pharmacy', 'Accounting software', 'SMS gateway', 'Payment gateway', 'None'] }
 ];
 
 const SCHOOL_QUESTIONS = [
@@ -97,7 +101,11 @@ const SCHOOL_QUESTIONS = [
   { id: 'parent_communication', section: 'Communication', question: 'Current parent comms?', type: 'multi_checkbox', required: true, options: ['Phone', 'SMS', 'WhatsApp', 'Email', 'Letters', 'PTM'] },
   { id: 'sms_alerts', section: 'Communication', question: 'Events for auto-alerts?', type: 'multi_checkbox', options: ['Absence', 'Fee reminder', 'Exam schedule', 'Results', 'Closure'] },
   { id: 'digital_comms_focus', section: 'Communication', question: 'How much should we focus on digital vs paper comms?', type: 'slider', required: false },
-  { id: 'term_start_date', section: 'Communication', question: 'Next academic term start date?', type: 'date', required: true }
+  { id: 'term_start_date', section: 'Communication', question: 'Next academic term start date?', type: 'date', required: true },
+
+  // Section 7: Approvals & Integrations (2) — FE2.3 critical coverage
+  { id: 'school_approvals', section: 'Approvals & Integrations', question: 'Which actions require principal/admin approval before they are finalized?', type: 'multi_checkbox', required: true, options: ['Fee concessions / scholarships', 'Admission decisions', 'Refunds', 'Student record changes', 'Large expenses', 'None needed'] },
+  { id: 'school_integrations', section: 'Approvals & Integrations', question: 'Which external systems must the app connect to?', type: 'multi_checkbox', required: true, options: ['Accounting software', 'SMS gateway', 'Payment gateway', 'Exam board portal', 'Biometric attendance', 'None'] }
 ];
 
 async function seedQuestions() {

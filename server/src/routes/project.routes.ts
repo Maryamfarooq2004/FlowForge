@@ -1,7 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { protect } from '../middleware/auth.middleware';
 import * as ps from '../services/project.service';
-import { Project } from '../models/Project.model';
+import { logAudit } from '../utils/audit.utils';
 
 const router = Router();
 router.use(protect);
@@ -60,6 +60,13 @@ router.post('/', async (req, res, next) => {
     }
     const project = await ps.createProjectService(uid(req), name, domain);
     res.status(201).json({ success: true, data: { project } });
+    logAudit({
+      userId: uid(req),
+      action: 'PROJECT_CREATE',
+      projectId: String((project as any)?._id ?? (project as any)?.id ?? ''),
+      ip: req.ip,
+      meta: { domain },
+    });
   } catch (e) { next(e); }
 });
 
@@ -82,14 +89,10 @@ router.patch('/:id/archive', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// Restore
+// Restore (un-archive; preserves the project's resume progress)
 router.patch('/:id/restore', async (req, res, next) => {
   try {
-    const project = await ps.updateProjectProgressService(
-      uid(req), req.params.id,
-      'intake_form', '', undefined
-    );
-    await Project.findByIdAndUpdate(req.params.id, { isArchived: false });
+    const project = await ps.restoreProjectService(uid(req), req.params.id);
     res.json({ success: true, data: { project } });
   } catch (e) { next(e); }
 });

@@ -1,5 +1,5 @@
 import React from 'react';
-import { useParams, Navigate } from 'react-router-dom';
+import { useParams, Navigate, useNavigate } from 'react-router-dom';
 import { useProject } from '../../hooks/useProjects';
 import { useIntakeBundle } from '../../hooks/useIntake';
 import { useQuery } from '@tanstack/react-query';
@@ -9,23 +9,21 @@ import { Skeleton } from '../../components/ui/Skeleton';
 
 const IntakeFormPage: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
+  const navigate = useNavigate();
 
-  // Fetch Project to get domain/category
   const { data: project, isLoading: isProjectLoading, error: projectError } = useProject(projectId);
-
-  // Fetch Intake Bundle to get existing form data
   const { data: bundle, isLoading: isBundleLoading } = useIntakeBundle(projectId);
 
-  // Fetch Questions based on domain (Legacy method — keeping for now or we could move to useIntake)
-  const { data: questions, isLoading: isQuestionsLoading, error: questionsError } = useQuery({
+  const {
+    data: questions,
+    isLoading: isQuestionsLoading,
+    error: questionsError,
+    refetch: refetchQuestions,
+  } = useQuery({
     queryKey: ['intakeQuestions', project?.domain],
-    queryFn: async () => {
-      // Note: This endpoint might need to be moved to project/intake structure if it's not already
-      // But for now we use what works
-      const res = await (intakeService as any).getQuestions(project!.domain as 'clinic' | 'school');
-      return res;
-    },
+    queryFn: () => intakeService.getQuestions(project!.domain as 'clinic' | 'school'),
     enabled: !!project?.domain,
+    retry: 1,
   });
 
   if (isProjectLoading || isQuestionsLoading || isBundleLoading) {
@@ -37,12 +35,44 @@ const IntakeFormPage: React.FC = () => {
     );
   }
 
-  if (projectError || !project || questionsError || !questions) {
-    return <Navigate to="/hub" />;
+  // Only the project genuinely missing warrants leaving the intake flow.
+  if (projectError || !project) {
+    return <Navigate to="/hub" replace />;
+  }
+
+  // Questions failed or came back empty — show a real, recoverable error instead
+  // of silently bouncing the user to the hub.
+  if (questionsError || !questions || questions.length === 0) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center p-6">
+        <div className="max-w-md text-center">
+          <h2 className="text-xl font-bold text-slate-900 mb-2">Couldn't load the intake questions</h2>
+          <p className="text-slate-500 text-sm mb-6">
+            {questionsError
+              ? 'There was a problem reaching the server. Please try again.'
+              : `No questions are configured for the "${project.domain}" category yet.`}
+          </p>
+          <div className="flex items-center justify-center gap-3">
+            <button
+              onClick={() => refetchQuestions()}
+              className="bg-[#0F766E] hover:bg-[#0D6B63] text-white px-6 py-2.5 rounded-xl text-sm font-semibold"
+            >
+              Try again
+            </button>
+            <button
+              onClick={() => navigate('/hub')}
+              className="border border-slate-200 text-slate-600 px-6 py-2.5 rounded-xl text-sm font-semibold hover:bg-slate-50"
+            >
+              Back to hub
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <CloseEndedForm 
+    <CloseEndedForm
       projectId={project.id}
       category={project.domain as 'clinic' | 'school'}
       questions={questions}

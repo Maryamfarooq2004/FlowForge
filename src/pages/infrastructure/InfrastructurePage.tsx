@@ -29,7 +29,7 @@ const InfrastructurePage: React.FC = () => {
   const [activeNavTab, setActiveNavTab] = useState<'intake' | 'infrastructure'>('infrastructure');
 
   const NAV_TABS = [
-    { id: 'intake', label: 'Intake Flow', path: `/project/${projectId || 'new'}/intake` },
+    { id: 'intake', label: 'Intake Flow', path: `/project/${projectId || 'new'}/intake/form` },
     { id: 'infrastructure', label: 'Infrastructure', path: `/project/${projectId || 'new'}/infrastructure` },
   ] as const;
 

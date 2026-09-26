@@ -184,9 +184,42 @@ export const archiveProjectService = async (userId: string, projectId: string) =
   return project;
 };
 
+// Restore = simply un-archive; the project's resume progress is preserved
+// (user-scoped, unlike a bare findByIdAndUpdate).
+export const restoreProjectService = async (userId: string, projectId: string) => {
+  const project = await Project.findOneAndUpdate(
+    { _id: projectId, userId },
+    { $set: { isArchived: false } },
+    { new: true }
+  );
+  if (!project) throw new AppError('Project not found.', 404, 'NOT_FOUND');
+  return project;
+};
+
+// Intake phases (in order); a duplicate can only resume within intake because
+// generated artifacts (spec/preview/deploy) are NOT copied.
+const INTAKE_PHASES = [
+  'intake_form', 'guided_story', 'guided_roles',
+  'guided_data', 'guided_rules', 'intake_review',
+] as const;
+const PHASE_SLUG: Record<string, string> = {
+  intake_form: 'form', guided_story: 'story', guided_roles: 'roles',
+  guided_data: 'data', guided_rules: 'rules', intake_review: 'review',
+};
+
 export const duplicateProjectService = async (userId: string, projectId: string) => {
   const original = await Project.findOne({ _id: projectId, userId });
   if (!original) throw new AppError('Project not found.', 404, 'NOT_FOUND');
+
+  // Deep-copy the intake work so the duplicate is a real copy, not a blank project.
+  const srcBundle = await IntakeBundle.findOne({ projectId, userId });
+
+  const origPhase = original.progress?.currentPhase || 'intake_form';
+  // If the original was already past intake, land the copy at review (all intake
+  // data is present); otherwise keep the same in-intake resume point.
+  const phase = (INTAKE_PHASES as readonly string[]).includes(origPhase)
+    ? origPhase
+    : 'intake_review';
 
   const copy = await Project.create({
     name: `${original.name} — Copy`,
@@ -194,22 +227,39 @@ export const duplicateProjectService = async (userId: string, projectId: string)
     userId,
     status: 'INTAKE',
     progress: {
-      currentPhase: 'intake_form',
+      currentPhase: phase,
       lastActiveScreen: '',
-      completedSteps: [],
+      completedSteps: (original.progress?.completedSteps || []).filter((s: string) =>
+        (INTAKE_PHASES as readonly string[]).includes(s)
+      ),
     },
   });
 
-  // Create fresh empty IntakeBundle for duplicate
+  // Now that we have the copy's id, set a valid resume route.
+  copy.progress.lastActiveScreen = `/project/${copy._id}/intake/${PHASE_SLUG[phase] || 'form'}`;
+  await copy.save();
+
+  // Clone the intake bundle content (answers + screens + document items).
   await IntakeBundle.create({
     projectId: copy._id,
     userId,
     domain: copy.domain,
-    structuredFormData: {},
-    guidedScreens: [1, 2, 3, 4].map(screen => ({
-      screen, content: '', detectedItems: [],
-      confirmedItems: [], isComplete: false, savedAt: new Date()
-    })),
+    structuredFormData: srcBundle?.structuredFormData ?? {},
+    structuredFormComplete: srcBundle?.structuredFormComplete ?? false,
+    guidedScreens: (srcBundle?.guidedScreens?.length
+      ? srcBundle.guidedScreens.map((s: any) => ({
+          screen: s.screen,
+          content: s.content ?? '',
+          detectedItems: s.detectedItems ?? [],
+          confirmedItems: s.confirmedItems ?? [],
+          isComplete: s.isComplete ?? false,
+          savedAt: new Date(),
+        }))
+      : [1, 2, 3, 4].map(screen => ({
+          screen, content: '', detectedItems: [],
+          confirmedItems: [], isComplete: false, savedAt: new Date(),
+        }))),
+    documentItems: srcBundle?.documentItems,
   });
 
   return copy;

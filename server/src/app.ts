@@ -3,7 +3,6 @@ import path from 'path';
 import cors from 'cors';
 import helmet from 'helmet';
 import mongoSanitize from 'express-mongo-sanitize';
-import rateLimit from 'express-rate-limit';
 import cookieParser from 'cookie-parser';
 import mongoose from 'mongoose';
 import authRoutes from './routes/auth.routes';
@@ -11,9 +10,23 @@ import adminRoutes from './routes/admin.routes';
 import intakeRoutes from './routes/intake.routes';
 import projectRoutes from './routes/project.routes';
 import aiRoutes from './routes/ai.routes';
+import specRoutes from './routes/workflowspec.routes';
+import generationRoutes from './routes/generation.routes';
+import previewRoutes from './routes/preview.routes';
+import exportRoutes from './routes/export.routes';
+import notificationRoutes from './routes/notification.routes';
+import themeRoutes from './routes/theme.routes';
+import documentRoutes from './routes/document.routes';
+import { initSentry, sentryErrorHandler } from './config/sentry';
+import { UPLOAD_DIR } from './middleware/upload.middleware';
+import { generalRateLimit } from './middleware/rateLimit.middleware';
+import { getLastEmailFor } from './services/email.service';
 
 export const createApp = (): Application => {
   const app = express();
+
+  // ── STEP 0: Sentry request/tracing handlers (must be first; no-op if SENTRY_DSN unset)
+  initSentry(app);
 
   // ── STEP 1: Trust Railway proxy (REQUIRED for rate limiting & IP detection)
   app.set('trust proxy', 1);
@@ -24,10 +37,19 @@ export const createApp = (): Application => {
     .map(o => o.trim())
     .filter(Boolean);
 
+  if (allowedOrigins.length === 0) {
+    console.warn('[CORS] ALLOWED_ORIGINS is not set — allowing all origins (dev). Set it in production.');
+  }
+
   app.use(cors({
     origin: (origin, callback) => {
-      // Ultra-loose for production stabilization
-      return callback(null, true);
+      // Non-browser clients (curl, server-to-server, same-origin) send no Origin.
+      if (!origin) return callback(null, true);
+      // Enforce the allow-list when configured; otherwise fall back to allow-all (dev).
+      if (allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error('CORS policy: origin not allowed.'));
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -56,18 +78,23 @@ export const createApp = (): Application => {
   const publicPath = path.join(__dirname, '../public');
   app.use(express.static(publicPath));
 
-  // DEBUG MIDDLEWARE: Log all requests
-  app.use((req, res, next) => {
-    if (req.method !== 'OPTIONS') {
-      console.log(`[DEBUG] ${req.method} ${req.url}`);
-      if (req.body && Object.keys(req.body).length > 0) {
-        const safeBody = { ...req.body };
-        if (safeBody.password) safeBody.password = '***';
-        console.log(`[DEBUG] Body:`, JSON.stringify(safeBody));
+  // Serve uploaded user assets (e.g. business logos)
+  app.use('/uploads', express.static(UPLOAD_DIR));
+
+  // DEBUG MIDDLEWARE: log requests — development only (never in production).
+  if (process.env.NODE_ENV !== 'production') {
+    app.use((req, res, next) => {
+      if (req.method !== 'OPTIONS') {
+        console.log(`[DEBUG] ${req.method} ${req.url}`);
+        if (req.body && Object.keys(req.body).length > 0) {
+          const safeBody = { ...req.body };
+          if (safeBody.password) safeBody.password = '***';
+          console.log(`[DEBUG] Body:`, JSON.stringify(safeBody));
+        }
       }
-    }
-    next();
-  });
+      next();
+    });
+  }
 
   // ── STEP 5: Cookie parsing (REQUIRED for refresh token cookie)
   app.use(cookieParser());
@@ -75,15 +102,8 @@ export const createApp = (): Application => {
   // ── STEP 6: NoSQL injection protection
   app.use(mongoSanitize());
 
-  // ── STEP 7: Rate limiting (global)
-  app.use(rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 200,
-    message: { success: false, code: 'RATE_LIMITED', message: 'Too many requests.' },
-    standardHeaders: true,
-    legacyHeaders: false,
-    skip: (req) => req.method === 'OPTIONS'
-  }));
+  // ── STEP 7: Rate limiting (global) — shared limiter from rateLimit.middleware
+  app.use(generalRateLimit);
 
   // ── STEP 8: Health check (before routes — never fails)
   app.get('/health', (req, res) => {
@@ -101,8 +121,34 @@ export const createApp = (): Application => {
   app.use('/api/v1/intake', intakeRoutes);
   app.use('/api/v1/projects', projectRoutes);
   app.use('/api/v1/ai', aiRoutes);
+  app.use('/api/v1/spec', specRoutes);
+  app.use('/api/v1/generation', generationRoutes);
+  app.use('/api/v1/preview', previewRoutes);
+  app.use('/api/v1/export', exportRoutes);
+  app.use('/api/v1/notifications', notificationRoutes);
+  app.use('/api/v1/themes', themeRoutes);
+  app.use('/api/v1/documents', documentRoutes);
   // Nested route: /api/v1/projects/:projectId/intake
   app.use('/api/v1/projects/:projectId/intake', intakeRoutes);
+
+  // Dev-only: read the last email (and its action link) captured in memory, so
+  // automated tests can verify/reset without access to a real inbox. Never mounted
+  // in production.
+  if (process.env.NODE_ENV !== 'production') {
+    app.get('/api/v1/debug/last-email', (req: Request, res: Response) => {
+      const to = String(req.query.to || '').trim();
+      if (!to) {
+        res.status(400).json({ success: false, message: 'Query param "to" is required.' });
+        return;
+      }
+      const email = getLastEmailFor(to);
+      if (!email) {
+        res.status(404).json({ success: false, message: `No email captured for ${to}.` });
+        return;
+      }
+      res.status(200).json({ success: true, data: email });
+    });
+  }
 
   // Catch-all for SPA routing (redirect all non-API requests to index.html)
   app.get('*', (req, res, next) => {
@@ -118,6 +164,9 @@ export const createApp = (): Application => {
       message: `Route ${req.method} ${req.originalUrl} not found.`
     });
   });
+
+  // ── Sentry error handler (must come before our own error handler; no-op if SENTRY_DSN unset)
+  sentryErrorHandler(app);
 
   // ── STEP 11: Global error handler (MUST be last)
   app.use((err: any, req: Request, res: Response, next: NextFunction) => {

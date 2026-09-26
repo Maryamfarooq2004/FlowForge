@@ -1,9 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
-import { Bell, HelpCircle, ChevronDown, User, Settings, LogOut, Menu } from 'lucide-react';
+import { Bell, HelpCircle, ChevronDown, User, Settings, LogOut, Menu, ShieldCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { useLogout } from '../../hooks/useAuth';
 import { useUIStore } from '../../store/uiStore';
+import { useUnreadCount } from '../../hooks/useNotifications';
+import { NotificationPanel } from '../../features/notifications/components/NotificationPanel';
 
 export const Navbar = () => {
   const { user } = useAuthStore();
@@ -11,7 +13,9 @@ export const Navbar = () => {
   const { mutate: logout, isPending: isLoggingOut } = useLogout();
   const navigate = useNavigate();
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const { data: unreadCount = 0 } = useUnreadCount(!!user);
 
   // Get initials from real user data
   const getInitials = (name: string): string => {
@@ -38,9 +42,10 @@ export const Navbar = () => {
                     flex items-center justify-between px-6 shadow-sm">
       {/* Left: Menu + Logo */}
       <div className="flex items-center gap-4">
-        <button 
+        <button
           onClick={toggleSidebar}
-          className="p-2 rounded-lg text-teal-300 hover:text-white 
+          aria-label="Toggle sidebar"
+          className="p-2 rounded-lg text-teal-300 hover:text-white
                      hover:bg-teal-700/50 transition-colors"
         >
           <Menu className="w-6 h-6" />
@@ -63,18 +68,27 @@ export const Navbar = () => {
       {/* Right Controls */}
       <div className="flex items-center gap-2">
         {/* Notifications */}
-        <button 
-          onClick={() => navigate('/hub/notifications')}
-          className="p-2 rounded-lg text-teal-300 hover:text-white 
+        <button
+          onClick={() => setNotifOpen(true)}
+          aria-label="Notifications"
+          className="p-2 rounded-lg text-teal-300 hover:text-white
                            hover:bg-teal-700/50 transition-colors relative"
         >
           <Bell className="w-5 h-5" />
+          {unreadCount > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1
+                             bg-rose-500 text-white text-[10px] font-bold rounded-full
+                             flex items-center justify-center leading-none ring-2 ring-[#134E4A]">
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </span>
+          )}
         </button>
 
         {/* Help */}
-        <button 
+        <button
           onClick={() => navigate('/hub/support')}
-          className="p-2 rounded-lg text-teal-300 hover:text-white 
+          aria-label="Help & support"
+          className="p-2 rounded-lg text-teal-300 hover:text-white
                            hover:bg-teal-700/50 transition-colors"
         >
           <HelpCircle className="w-5 h-5" />
@@ -128,6 +142,16 @@ export const Navbar = () => {
 
               {/* Menu items */}
               <div className="py-1">
+                {user?.role === 'admin' && (
+                  <button
+                    onClick={() => { navigate('/admin'); setDropdownOpen(false); }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm
+                               text-indigo-700 hover:bg-indigo-50 transition-colors font-medium"
+                  >
+                    <ShieldCheck className="w-4 h-4" />
+                    Admin Panel
+                  </button>
+                )}
                 <button
                   onClick={() => { navigate('/hub/settings'); setDropdownOpen(false); }}
                   className="w-full flex items-center gap-3 px-4 py-2.5 text-sm 
@@ -162,6 +186,8 @@ export const Navbar = () => {
           )}
         </div>
       </div>
+
+      <NotificationPanel isOpen={notifOpen} onClose={() => setNotifOpen(false)} />
     </nav>
   );
 };

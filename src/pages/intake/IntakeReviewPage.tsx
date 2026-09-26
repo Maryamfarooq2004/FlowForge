@@ -5,7 +5,8 @@ import { Logo } from '../../components/shared/Logo';
 import { Avatar } from '../../components/ui/Avatar';
 import { Button } from '../../components/ui/Button';
 import intakeService from '../../services/intakeService';
-import { useIntakeBundle } from '../../hooks/useIntake';
+import { useIntakeBundle, useValidateIntake } from '../../hooks/useIntake';
+import { useQueryClient } from '@tanstack/react-query';
 import { 
   Bell, 
   BookOpen, 
@@ -18,7 +19,8 @@ import {
   Info,
   ArrowRight,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  FileSpreadsheet
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { cn } from '../../utils/classNames';
@@ -29,27 +31,45 @@ const IntakeReviewPage: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const { user } = useAuthStore();
 
+  const queryClient = useQueryClient();
+
   // Fetch intake bundle data from MongoDB
   const { data: bundle, isLoading } = useIntakeBundle(projectId);
 
+  // FE2.11 — run the consistency check up-front so issues show before Convert.
+  const { data: validation } = useValidateIntake(projectId);
+  const [assembleErrors, setAssembleErrors] = useState<string[]>([]);
+
+  const errors = assembleErrors.length ? assembleErrors : (validation?.errors ?? []);
+  const warnings = validation?.warnings ?? [];
+
   const assembleMutation = useMutation({
-    mutationFn: () => (intakeService as any).assembleBundle(projectId!),
-    onSuccess: () => {
+    mutationFn: () => intakeService.assembleBundle(projectId!),
+    onSuccess: (data) => {
+      if (data?.warnings?.length) {
+        toast(`Converted with ${data.warnings.length} note(s) you can review later.`);
+      }
       toast.success('Intake converted to workflow specification!');
       navigate(`/project/${projectId}/spec`);
     },
     onError: (error: any) => {
-      const msg = error.response?.data?.message || 'Failed to assemble bundle';
-      toast.error(msg);
+      if (error.response?.status === 422) {
+        setAssembleErrors(error.response?.data?.errors ?? []);
+        queryClient.invalidateQueries({ queryKey: ['intake', projectId, 'validate'] });
+        toast.error('Please fix the highlighted issues before converting.');
+      } else {
+        toast.error(error.response?.data?.message || 'Failed to assemble bundle');
+      }
     }
   });
 
-  const handleNext = async () => {
+  const handleNext = () => {
+    setAssembleErrors([]);
     assembleMutation.mutate();
   };
 
   const handleBack = () => {
-    navigate(`/project/${projectId}/intake/story`);
+    navigate(`/project/${projectId}/intake/rules`);
   };
 
   if (isLoading) {
@@ -85,16 +105,26 @@ const IntakeReviewPage: React.FC = () => {
           </p>
         </div>
 
-        {(assembleMutation.data as any)?.validationErrors && (assembleMutation.data as any).validationErrors.length > 0 && (
+        {errors.length > 0 && (
           <div className="bg-red-50 border border-red-200 rounded-2xl p-6 space-y-3">
             <div className="flex items-center space-x-2 text-red-800 font-bold">
               <AlertCircle size={20} />
-              <span>Validation Errors Detected</span>
+              <span>Fix these before converting</span>
             </div>
             <ul className="list-disc list-inside text-sm text-red-700 space-y-1">
-              {(assembleMutation.data as any).validationErrors.map((err: string, i: number) => (
-                <li key={i}>{err}</li>
-              ))}
+              {errors.map((err, i) => <li key={i}>{err}</li>)}
+            </ul>
+          </div>
+        )}
+
+        {warnings.length > 0 && (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 space-y-3">
+            <div className="flex items-center space-x-2 text-amber-800 font-bold">
+              <AlertTriangle size={20} />
+              <span>Suggestions (optional — you can still convert)</span>
+            </div>
+            <ul className="list-disc list-inside text-sm text-amber-700 space-y-1">
+              {warnings.map((w, i) => <li key={i}>{w}</li>)}
             </ul>
           </div>
         )}
@@ -215,6 +245,23 @@ const IntakeReviewPage: React.FC = () => {
           </div>
         </div>
 
+        {/* Optional: enrich from existing documents */}
+        <button
+          onClick={() => navigate(`/project/${projectId}/documents`)}
+          className="w-full bg-white rounded-2xl border border-dashed border-slate-300 p-5 flex items-center justify-between hover:border-teal-400 hover:bg-teal-50/30 transition-colors text-left"
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-[#0F766E]">
+              <FileSpreadsheet size={20} />
+            </div>
+            <div>
+              <h3 className="font-semibold text-slate-800">Add existing documents (optional)</h3>
+              <p className="text-sm text-slate-500">Upload an Excel register, CSV, or PDF — we'll extract fields to enrich your spec.</p>
+            </div>
+          </div>
+          <ArrowRight size={18} className="text-slate-400" />
+        </button>
+
         {/* Footer Buttons */}
         <div className="flex items-center justify-between pt-4 pb-12">
           <button 
@@ -224,10 +271,15 @@ const IntakeReviewPage: React.FC = () => {
             ← Edit My Intake
           </button>
           
-          <Button 
+          <Button
             onClick={handleNext}
-            disabled={assembleMutation.isPending || !allScreensComplete}
-            title={!allScreensComplete ? 'Complete all 4 guided screens before building your blueprint' : ''}
+            disabled={assembleMutation.isPending || !allScreensComplete || !isFormComplete || errors.length > 0}
+            title={
+              !isFormComplete ? 'Complete the close-ended form first'
+              : !allScreensComplete ? 'Complete all 4 guided screens before building your blueprint'
+              : errors.length > 0 ? 'Resolve the issues above before converting'
+              : ''
+            }
             className="h-14 px-8 rounded-2xl bg-gradient-to-r from-[#0F766E] to-[#4F46E5] text-white font-bold flex items-center space-x-3 shadow-xl shadow-teal-900/10 transition-transform active:scale-[0.98] disabled:opacity-70"
           >
             {assembleMutation.isPending ? (

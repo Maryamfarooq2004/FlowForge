@@ -9,6 +9,9 @@ import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { cn } from '../../utils/classNames';
 import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'react-hot-toast';
+import { useResetPassword } from '../../hooks/useAuth';
+import type { ApiError } from '../../types/global.types';
 
 const resetPasswordSchema = z.object({
   password: z.string()
@@ -25,7 +28,10 @@ type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>;
 
 export const ResetPasswordPage: React.FC = () => {
   const { token } = useParams();
-  const [status, setStatus] = useState<'verifying' | 'valid' | 'expired' | 'success'>('verifying');
+  const resetPassword = useResetPassword();
+  const [status, setStatus] = useState<'verifying' | 'valid' | 'expired' | 'success'>(
+    token ? 'valid' : 'expired'
+  );
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState(0);
@@ -59,23 +65,19 @@ export const ResetPasswordPage: React.FC = () => {
     setPasswordStrength(strength);
   }, [passwordValue, hasLength, hasLetter, hasNumber]);
 
-  useEffect(() => {
-    // Simulate token verification
-    const verifyToken = async () => {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      // For demo, if token is "expired", show expired state
-      if (token === 'expired') {
+  const onSubmit = async (data: ResetPasswordFormValues) => {
+    try {
+      await resetPassword.mutateAsync({ token: token!, newPassword: data.password });
+      setStatus('success');
+    } catch (err) {
+      const apiErr = err as ApiError;
+      const code = apiErr.response?.data?.code;
+      if (code === 'INVALID_RESET_TOKEN' || code === 'MISSING_TOKEN') {
         setStatus('expired');
       } else {
-        setStatus('valid');
+        toast.error(apiErr.response?.data?.message || 'Could not reset password. Please try again.');
       }
-    };
-    verifyToken();
-  }, [token]);
-
-  const onSubmit = async (data: ResetPasswordFormValues) => {
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setStatus('success');
+    }
   };
 
   const strengthColors = ['bg-slate-200', 'bg-red-500', 'bg-amber-500', 'bg-blue-500', 'bg-green-500'];
@@ -108,7 +110,7 @@ export const ResetPasswordPage: React.FC = () => {
             </div>
             <h2 className="text-[24px] font-bold text-slate-900 font-poppins mb-3">This link has expired</h2>
             <p className="text-slate-500 mb-8 max-w-sm mx-auto">
-              Password reset links are only valid for 1 hour for your security.
+              Password reset links are only valid for 15 minutes for your security.
             </p>
             <Link to="/forgot-password" className="block">
               <Button className="w-full h-12 bg-[#0F766E] hover:bg-[#0D6B63] text-white font-semibold">

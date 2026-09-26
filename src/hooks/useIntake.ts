@@ -39,12 +39,12 @@ export const useSaveGuidedScreen = (projectId: string) => {
 // Auto-save (background, no navigation)
 export const useAutoSaveScreen = (projectId: string) => {
   return useMutation({
-    mutationFn: (data: { screenNumber: 1|2|3|4; content: string }) =>
+    mutationFn: (data: { screenNumber: 1 | 2 | 3 | 4; content: string }) =>
       intakeService.autoSaveScreen(projectId, data.screenNumber, data.content),
   });
 };
 
-// Save structured form
+// Save structured form → { bundle, complete, missingRequired }
 export const useSaveStructuredForm = (projectId: string) => {
   return useMutation({
     mutationFn: (formData: Record<string, any>) =>
@@ -52,12 +52,20 @@ export const useSaveStructuredForm = (projectId: string) => {
   });
 };
 
-// AI Suggestions hook
-export const useAISuggestions = (content: string, screenSlug: string, domain: string) => {
-  return useQuery({
-    queryKey: ['suggestions', screenSlug, domain, content],
-    queryFn: () => intakeService.getSuggestions(content, screenSlug, domain),
-    enabled: content.length > 20, // Only fetch after some typing
-    staleTime: 5000,
+// AI Suggestions — button-triggered (empty content → guidance mode, per product spec)
+export const useAISuggestions = () => {
+  return useMutation({
+    mutationFn: (vars: { content: string; screenSlug: string; domain: string }) =>
+      intakeService.getSuggestions(vars.content, vars.screenSlug, vars.domain),
   });
 };
+
+// FE2.11 pre-check on the review page.
+export const useValidateIntake = (projectId: string | undefined) =>
+  useQuery({
+    queryKey: ['intake', projectId, 'validate'],
+    queryFn: () => intakeService.validateIntake(projectId!),
+    enabled: !!projectId,
+    staleTime: 0,
+    retry: false,
+  });

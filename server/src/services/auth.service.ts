@@ -7,6 +7,28 @@ import {
   generateRefreshToken,
   verifyRefreshToken,
 } from '../utils/jwt.utils';
+import {
+  sendPasswordResetEmail,
+  sendVerificationEmail,
+  getFrontendUrl,
+} from './email.service';
+
+const PASSWORD_RESET_TTL_MS = 15 * 60 * 1000; // 15 minutes
+const EMAIL_VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+// Shared password-strength check (mirrors registration rules).
+const assertStrongPassword = (password: string) => {
+  if (!password || password.length < 8) {
+    throw new AppError('Password must be at least 8 characters.', 400, 'WEAK_PASSWORD');
+  }
+  if (!/[A-Za-z]/.test(password) || !/[0-9]/.test(password)) {
+    throw new AppError(
+      'Password must contain at least one letter and one number.',
+      400,
+      'WEAK_PASSWORD'
+    );
+  }
+};
 
 const BCRYPT_ROUNDS = parseInt(process.env.BCRYPT_ROUNDS || '12');
 const MAX_LOGIN_ATTEMPTS = 5;
@@ -20,6 +42,7 @@ const sanitizeUser = (user: IUser) => ({
   orgType: user.organizationType,
   businessName: user.businessName,
   logoUrl: user.logoUrl,
+  isEmailVerified: user.isEmailVerified,
   createdAt: user.createdAt,
   updatedAt: user.updatedAt,
   role: user.role,
@@ -28,6 +51,15 @@ const sanitizeUser = (user: IUser) => ({
 // Helper: hash a refresh token for storage
 const hashToken = (token: string): string =>
   crypto.createHash('sha256').update(token).digest('hex');
+
+// Helper: create + persist an email-verification token, return the raw token.
+// Caller is responsible for saving the user document.
+const issueVerificationToken = (user: IUser): string => {
+  const rawToken = crypto.randomBytes(32).toString('hex');
+  user.emailVerificationToken = hashToken(rawToken);
+  user.emailVerificationTokenExpires = new Date(Date.now() + EMAIL_VERIFICATION_TTL_MS);
+  return rawToken;
+};
 
 // ── REGISTER ───────────────────────────────────────
 
@@ -90,20 +122,79 @@ export const registerService = async (
     throw err;
   }
 
-  // 6. Generate tokens
+  // 6. Generate session tokens + a one-time email-verification token
   const accessToken = generateAccessToken(user._id.toString());
   const refreshToken = generateRefreshToken(user._id.toString());
+  const rawVerifyToken = issueVerificationToken(user);
 
-  // 7. Store hashed refresh token
+  // 7. Store hashed refresh token + verification token
   await User.findByIdAndUpdate(user._id, {
     $push: { refreshTokens: hashToken(refreshToken) },
+    emailVerificationToken: user.emailVerificationToken,
+    emailVerificationTokenExpires: user.emailVerificationTokenExpires,
   });
+
+  // 8. Send the verification email (soft gate — user is logged in immediately).
+  //    sendVerificationEmail never throws, so a mail hiccup can't break signup.
+  const verifyUrl = `${getFrontendUrl()}/verify-email/${rawVerifyToken}`;
+  await sendVerificationEmail(user.email, verifyUrl);
 
   return {
     user: sanitizeUser(user),
     accessToken,
     refreshToken,
   };
+};
+
+// ── VERIFY EMAIL ───────────────────────────────────
+
+export const verifyEmailService = async (token: string) => {
+  if (!token) {
+    throw new AppError('Verification token is required.', 400, 'MISSING_TOKEN');
+  }
+
+  const hashed = hashToken(token);
+  const user = await User.findOne({
+    emailVerificationToken: hashed,
+    emailVerificationTokenExpires: { $gt: new Date() },
+  }).select('+emailVerificationToken +emailVerificationTokenExpires');
+
+  if (!user) {
+    throw new AppError(
+      'Verification link is invalid or has expired.',
+      400,
+      'INVALID_VERIFICATION_TOKEN'
+    );
+  }
+
+  user.isEmailVerified = true;
+  user.emailVerificationToken = undefined;
+  user.emailVerificationTokenExpires = undefined;
+  await user.save();
+
+  return sanitizeUser(user);
+};
+
+// ── RESEND VERIFICATION ────────────────────────────
+
+export const resendVerificationService = async (userId: string) => {
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new AppError('User not found.', 404, 'USER_NOT_FOUND');
+  }
+
+  // Already verified — resolve as success (idempotent, no email sent).
+  if (user.isEmailVerified) {
+    return { success: true, alreadyVerified: true };
+  }
+
+  const rawVerifyToken = issueVerificationToken(user);
+  await user.save();
+
+  const verifyUrl = `${getFrontendUrl()}/verify-email/${rawVerifyToken}`;
+  await sendVerificationEmail(user.email, verifyUrl);
+
+  return { success: true, alreadyVerified: false };
 };
 
 // ── LOGIN ──────────────────────────────────────────
@@ -262,4 +353,118 @@ export const getMeService = async (userId: string) => {
     throw new AppError('User not found.', 404, 'USER_NOT_FOUND');
   }
   return sanitizeUser(user);
+};
+
+// ── UPDATE PROFILE ─────────────────────────────────
+
+export const updateProfileService = async (
+  userId: string,
+  updates: { fullName?: string; businessName?: string; logoUrl?: string }
+) => {
+  const allowed: Record<string, unknown> = {};
+  if (typeof updates.fullName === 'string') {
+    const name = updates.fullName.trim();
+    if (name.length < 2) {
+      throw new AppError('Name must be at least 2 characters.', 400, 'INVALID_NAME');
+    }
+    allowed.fullName = name;
+  }
+  if (typeof updates.businessName === 'string') {
+    allowed.businessName = updates.businessName.trim();
+  }
+  if (typeof updates.logoUrl === 'string') {
+    allowed.logoUrl = updates.logoUrl;
+  }
+
+  const user = await User.findByIdAndUpdate(userId, allowed, {
+    new: true,
+    runValidators: true,
+  });
+  if (!user) {
+    throw new AppError('User not found.', 404, 'USER_NOT_FOUND');
+  }
+  return sanitizeUser(user);
+};
+
+// ── CHANGE PASSWORD ────────────────────────────────
+
+export const changePasswordService = async (
+  userId: string,
+  currentPassword: string,
+  newPassword: string
+) => {
+  if (!currentPassword || !newPassword) {
+    throw new AppError('Current and new passwords are required.', 400, 'MISSING_FIELDS');
+  }
+
+  const user = await User.findById(userId).select('+password +refreshTokens');
+  if (!user) {
+    throw new AppError('User not found.', 404, 'USER_NOT_FOUND');
+  }
+
+  const isMatch = await user.comparePassword(currentPassword);
+  if (!isMatch) {
+    throw new AppError('Current password is incorrect.', 401, 'INVALID_PASSWORD');
+  }
+
+  assertStrongPassword(newPassword);
+
+  const sameAsOld = await bcrypt.compare(newPassword, user.password);
+  if (sameAsOld) {
+    throw new AppError('New password must be different from the current one.', 400, 'SAME_PASSWORD');
+  }
+
+  user.password = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+  // Invalidate all existing sessions on password change (force re-login elsewhere).
+  user.refreshTokens = [];
+  await user.save();
+
+  return { success: true };
+};
+
+// ── FORGOT PASSWORD ────────────────────────────────
+
+export const forgotPasswordService = async (email: string) => {
+  // Always resolve the same way — never reveal whether the email exists.
+  if (!email) return { success: true };
+
+  const user = await User.findOne({ email: email.toLowerCase().trim() });
+  if (user) {
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    user.passwordResetToken = hashToken(rawToken);
+    user.passwordResetTokenExpires = new Date(Date.now() + PASSWORD_RESET_TTL_MS);
+    await user.save();
+
+    const resetUrl = `${getFrontendUrl()}/reset-password/${rawToken}`;
+    await sendPasswordResetEmail(user.email, resetUrl);
+  }
+
+  return { success: true };
+};
+
+// ── RESET PASSWORD ─────────────────────────────────
+
+export const resetPasswordService = async (token: string, newPassword: string) => {
+  if (!token) {
+    throw new AppError('Reset token is required.', 400, 'MISSING_TOKEN');
+  }
+  assertStrongPassword(newPassword);
+
+  const hashed = hashToken(token);
+  const user = await User.findOne({
+    passwordResetToken: hashed,
+    passwordResetTokenExpires: { $gt: new Date() },
+  }).select('+password +refreshTokens +passwordResetToken +passwordResetTokenExpires');
+
+  if (!user) {
+    throw new AppError('Reset link is invalid or has expired.', 400, 'INVALID_RESET_TOKEN');
+  }
+
+  user.password = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+  user.passwordResetToken = undefined;
+  user.passwordResetTokenExpires = undefined;
+  user.refreshTokens = []; // Invalidate all sessions.
+  await user.save();
+
+  return { success: true };
 };

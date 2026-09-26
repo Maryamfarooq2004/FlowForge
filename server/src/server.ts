@@ -3,12 +3,22 @@ dotenv.config();
 
 import { createApp } from './app';
 import { connectDatabase } from './config/database';
+import { reapStaleRunsOnBoot } from './services/generation.service';
 
 const startServer = async () => {
   try {
     // 1. Connect database FIRST before anything else
     await connectDatabase();
-    
+
+    // 2. Fail any generation runs left 'running' by a previous (now-dead)
+    //    process — generation runs in-process, so none can survive a restart.
+    try {
+      const reaped = await reapStaleRunsOnBoot();
+      if (reaped > 0) console.log(`Reaped ${reaped} stale generation run(s) from a previous process.`);
+    } catch (err) {
+      console.error('Stale-run reaper failed (non-fatal):', err);
+    }
+
     const app = createApp();
     
     const PORT = process.env.PORT || 5000;
